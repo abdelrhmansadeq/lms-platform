@@ -2,9 +2,9 @@ import type { Metadata } from 'next'
 import { Inter, IBM_Plex_Sans_Arabic } from 'next/font/google'
 import './globals.css'
 import { Navbar } from '@/components/navbar'
+import { MobileHeader } from '@/components/mobile-header' // <--- ضفنا ده
 import { Toaster } from 'sonner'
 
-// تحميل الخطوط مع تفعيل display: swap
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter', display: 'swap' })
 const ibmPlexArabic = IBM_Plex_Sans_Arabic({
     weight: ['300', '400', '500', '600', '700'],
@@ -26,10 +26,19 @@ export default function RootLayout({
     return (
         <html lang="ar" dir="rtl">
         <body className={`${inter.variable} ${ibmPlexArabic.variable} font-sans bg-background text-foreground min-h-screen flex flex-col antialiased`}>
+
+        {/* الهيدر الخاص بالموبايل */}
+        <MobileHeader />
+
+        {/* النافبار الخاص بالكمبيوتر */}
         <Navbar />
-        <main className="flex-1">
+
+        {/* المحتوى الأساسي مع مساحة سفلية للموبايل عشان الشريط السفلي */}
+        <main className="flex-1 pb-20 md:pb-0">
             {children}
         </main>
+
+        {/* الإشعارات */}
         <Toaster position="top-center" richColors />
         </body>
         </html>
