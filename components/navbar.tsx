@@ -15,10 +15,9 @@ export async function Navbar() {
     }
 
     return (
-        <nav className="border-b bg-white dark:bg-zinc-950 shadow-sm sticky top-0 z-50">
+        <nav className="border-b bg-background/80 backdrop-blur-md shadow-sm sticky top-0 z-50">
             <div className="container mx-auto flex h-16 items-center justify-between px-4">
 
-                {/* الجزء الأيسر: اللوجو والروابط */}
                 <div className="flex items-center gap-6">
                     <Link href="/" className="text-xl font-bold text-primary">
                         منصة LMS
@@ -35,11 +34,14 @@ export async function Navbar() {
                                     لوحة التحكم
                                 </Link>
                             )}
+
+                            <Link href="/profile" className="hover:text-primary transition-colors">
+                                حسابي
+                            </Link>
                         </div>
                     )}
                 </div>
 
-                {/* الجزء الأيمن: بيانات المستخدم */}
                 <div className="flex items-center gap-4">
                     {user ? (
                         <>

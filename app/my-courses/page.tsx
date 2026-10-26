@@ -12,7 +12,7 @@ type EnrollmentWithCourse = {
         title: string;
         slug: string;
         description: string | null;
-        thumbnail_url: string | null; // ضفنا الصورة هنا
+        thumbnail_url: string | null;
     } | null;
 };
 
@@ -41,7 +41,7 @@ export default async function MyCoursesPage() {
             </div>
 
             {(!enrollments || enrollments.length === 0) ? (
-                <div className="text-center py-20 bg-card rounded-lg border border-dashed">
+                <div className="text-center py-20 bg-card rounded-xl border border-dashed border-border">
                     <h3 className="text-xl font-semibold mb-2">لم تشترك في أي كورس بعد</h3>
                     <p className="text-muted-foreground mb-6">تصفح الكورسات المتاحة وابدأ رحلتك التعليمية الآن.</p>
                     <Link href="/">
@@ -55,9 +55,8 @@ export default async function MyCoursesPage() {
                         if (!course) return null
 
                         return (
-                            <Card key={course.id} className="flex flex-col hover:shadow-lg transition-shadow overflow-hidden">
-                                {/* صورة الكورس */}
-                                <div className="relative h-40 w-full bg-zinc-100 dark:bg-zinc-800 border-b">
+                            <Card key={course.id} className="flex flex-col hover:shadow-lg transition-shadow overflow-hidden bg-card border-border">
+                                <div className="relative h-40 w-full bg-muted border-b border-border">
                                     {course.thumbnail_url ? (
                                         <img src={course.thumbnail_url} alt={course.title} className="w-full h-full object-cover" />
                                     ) : (
@@ -72,7 +71,7 @@ export default async function MyCoursesPage() {
                                     </CardDescription>
                                 </CardHeader>
 
-                                <CardFooter className="pt-4 border-t">
+                                <CardFooter className="pt-4 border-t border-border">
                                     <Link href={`/courses/${course.slug}`} className="w-full">
                                         <Button className="w-full">متابعة التعلم</Button>
                                     </Link>

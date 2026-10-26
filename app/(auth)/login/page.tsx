@@ -12,8 +12,8 @@ export default function LoginPage() {
     const [state, formAction, isPending] = useActionState(loginAction, null)
 
     return (
-        <div className="flex min-h-screen items-center justify-center p-4 bg-gray-50 dark:bg-zinc-950">
-            <Card className="w-full max-w-md">
+        <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center p-4 bg-background">
+            <Card className="w-full max-w-md shadow-lg border-zinc-800">
                 <CardHeader>
                     <CardTitle className="text-2xl text-center">تسجيل الدخول</CardTitle>
                     <CardDescription className="text-center">
@@ -35,7 +35,7 @@ export default function LoginPage() {
                         </div>
 
                         {state?.error && (
-                            <div className="text-sm font-medium text-red-500 text-center">
+                            <div className="text-sm font-medium text-red-500 text-center bg-red-500/10 p-2 rounded">
                                 {state.error}
                             </div>
                         )}
@@ -47,7 +47,7 @@ export default function LoginPage() {
                     </form>
                 </CardContent>
 
-                <CardFooter className="flex justify-center">
+                <CardFooter className="flex justify-center border-t pt-6">
                     <p className="text-sm text-muted-foreground">
                         ليس لديك حساب؟{' '}
                         <Link href="/register" className="text-primary hover:underline">

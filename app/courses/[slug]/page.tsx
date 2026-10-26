@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 import { EnrollForm } from './enroll-form'
+import { CheckCircle2, Lock } from 'lucide-react'
 
 export default async function CourseDetailsPage({ params }: { params: Promise<{ slug: string }> }) {
     const { slug } = await params
@@ -12,7 +13,6 @@ export default async function CourseDetailsPage({ params }: { params: Promise<{ 
 
     const { data: { user } } = await supabase.auth.getUser()
 
-    // جلب الكورس
     const { data: course } = await supabase
         .from('courses')
         .select('*')
@@ -22,7 +22,6 @@ export default async function CourseDetailsPage({ params }: { params: Promise<{ 
 
     if (!course) notFound()
 
-    // هل الطالب مشترك؟
     let isEnrolled = false
     if (user) {
         const { data: enrollment } = await supabase
@@ -35,7 +34,6 @@ export default async function CourseDetailsPage({ params }: { params: Promise<{ 
         if (enrollment) isEnrolled = true
     }
 
-    // جلب الدروس
     const { data: lessons } = await supabase
         .from('lessons')
         .select('*')
@@ -46,12 +44,9 @@ export default async function CourseDetailsPage({ params }: { params: Promise<{ 
         <div className="container mx-auto px-4 py-8 max-w-5xl">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
-                {/* تفاصيل الكورس */}
                 <div className="lg:col-span-2 space-y-6">
-
-                    {/* صورة الغلاف الجديدة */}
                     {course.thumbnail_url && (
-                        <div className="w-full h-64 md:h-80 rounded-xl overflow-hidden border shadow-sm relative bg-zinc-100 dark:bg-zinc-800">
+                        <div className="w-full h-64 md:h-80 rounded-2xl overflow-hidden border border-border shadow-lg relative bg-muted">
                             <img
                                 src={course.thumbnail_url}
                                 alt={course.title}
@@ -62,32 +57,33 @@ export default async function CourseDetailsPage({ params }: { params: Promise<{ 
 
                     <div>
                         <h1 className="text-3xl font-bold mb-4">{course.title}</h1>
-                        <p className="text-muted-foreground text-lg whitespace-pre-wrap">{course.description}</p>
+                        <p className="text-muted-foreground text-lg whitespace-pre-wrap leading-relaxed">{course.description}</p>
                     </div>
 
-                    <Card>
+                    <Card className="bg-card border-border">
                         <CardHeader>
                             <CardTitle>محتوى الكورس</CardTitle>
                             <CardDescription>عدد الدروس: {lessons?.length || 0} درس</CardDescription>
                         </CardHeader>
                         <CardContent>
                             {!isEnrolled && (!lessons || lessons.length === 0) ? (
-                                <div className="bg-zinc-50 dark:bg-zinc-900 border border-dashed p-6 text-center rounded-lg">
-                                    <p className="text-muted-foreground">🔒 محتوى الكورس محمي. يرجى الاشتراك بكود التفعيل لعرض الدروس.</p>
+                                <div className="bg-muted/50 border border-border border-dashed p-8 text-center rounded-xl">
+                                    <Lock className="w-8 h-8 text-muted-foreground mx-auto mb-3" />
+                                    <p className="text-muted-foreground">محتوى الكورس محمي. يرجى الاشتراك بكود التفعيل لعرض الدروس.</p>
                                 </div>
                             ) : (
                                 <div className="space-y-3">
                                     {lessons?.map((lesson) => (
-                                        <div key={lesson.id} className="flex items-center justify-between p-3 border rounded-md">
+                                        <div key={lesson.id} className="flex items-center justify-between p-4 border border-border rounded-xl bg-background hover:bg-muted/30 transition-colors">
                                             <div className="flex items-center gap-3">
-                        <span className="w-6 h-6 flex items-center justify-center bg-primary/10 text-primary rounded-full text-xs font-bold">
+                        <span className="w-8 h-8 flex items-center justify-center bg-primary/10 text-primary rounded-full text-sm font-bold">
                           {lesson.position}
                         </span>
                                                 <span className="font-medium">{lesson.title}</span>
                                             </div>
                                             {isEnrolled && (
                                                 <Link href={`/learn/${course.slug}/${lesson.id}`}>
-                                                    <Button size="sm" variant="outline">مشاهدة</Button>
+                                                    <Button size="sm" variant="outline" className="border-primary/50 text-primary hover:bg-primary hover:text-white">مشاهدة</Button>
                                                 </Link>
                                             )}
                                         </div>
@@ -98,11 +94,10 @@ export default async function CourseDetailsPage({ params }: { params: Promise<{ 
                     </Card>
                 </div>
 
-                {/* صندوق الاشتراك */}
                 <div>
-                    <Card className="sticky top-24">
+                    <Card className="sticky top-24 bg-card border-border shadow-lg">
                         <CardHeader>
-                            <CardTitle className="text-2xl text-primary">
+                            <CardTitle className="text-3xl font-bold text-center">
                                 {course.price === 0 ? 'مجاني' : `${course.price} ج.م`}
                             </CardTitle>
                         </CardHeader>
@@ -114,14 +109,15 @@ export default async function CourseDetailsPage({ params }: { params: Promise<{ 
                                 </div>
                             ) : isEnrolled ? (
                                 <div className="text-center space-y-4">
-                                    <div className="bg-green-50 text-green-700 p-3 rounded-md text-sm font-medium">
-                                        أنت مشترك في هذا الكورس بالفعل ✅
+                                    <div className="bg-green-500/10 text-green-500 p-4 rounded-xl text-sm font-medium flex items-center justify-center gap-2">
+                                        <CheckCircle2 className="w-5 h-5" />
+                                        أنت مشترك في هذا الكورس
                                     </div>
-                                    <Button className="w-full" disabled>أنت مشترك</Button>
+                                    <Button className="w-full" disabled>أنت مشترك بالفعل</Button>
                                 </div>
                             ) : (
                                 <div className="space-y-4">
-                                    <p className="text-sm text-muted-foreground text-center">لديك كود تفعيل؟ أدخله هنا للاشتراك.</p>
+                                    <p className="text-sm text-muted-foreground text-center mb-2">لديك كود تفعيل؟ أدخله هنا للاشتراك.</p>
                                     <EnrollForm courseId={course.id} />
                                 </div>
                             )}
