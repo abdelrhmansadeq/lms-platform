@@ -40,18 +40,16 @@ export default function NewCoursePage() {
                             />
                         </div>
 
-                        {/* خانة رابط الصورة الجديدة */}
                         <div className="space-y-2">
-                            <Label htmlFor="thumbnail_url">رابط صورة الغلاف (اختياري)</Label>
+                            <Label htmlFor="thumbnail_file">صورة الغلاف (اختياري)</Label>
                             <Input
-                                id="thumbnail_url"
-                                name="thumbnail_url"
-                                type="url"
-                                placeholder="https://example.com/image.jpg"
-                                dir="ltr"
-                                className="text-left"
+                                id="thumbnail_file"
+                                name="thumbnail_file"
+                                type="file"
+                                accept="image/*"
+                                className="cursor-pointer file:text-primary file:font-semibold"
                             />
-                            <p className="text-xs text-muted-foreground">يمكنك رفع صورة على موقع مثل ImgBB ونسخ الرابط المباشر هنا.</p>
+                            <p className="text-xs text-muted-foreground">اختر صورة من جهازك (يفضل أن تكون أقل من 2 ميجابايت).</p>
                         </div>
 
                         <div className="space-y-2">

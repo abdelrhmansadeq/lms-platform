@@ -15,11 +15,30 @@ export async function createCourseAction(_prevState: { error?: string; success?:
     const title = formData.get('title') as string
     const description = formData.get('description') as string
     const price = Number(formData.get('price')) || 0
-    // استقبال رابط الصورة
-    const thumbnailUrl = formData.get('thumbnail_url') as string
+    const thumbnailFile = formData.get('thumbnail_file') as File | null
 
     if (!title || title.trim().length < 3) {
         return { error: 'عنوان الكورس مطلوب (3 أحرف على الأقل)' }
+    }
+
+    let thumbnailUrl = null
+
+    // لو المدرس اختار صورة، هنرفعها
+    if (thumbnailFile && thumbnailFile.size > 0) {
+        const fileExt = thumbnailFile.name.split('.').pop()
+        const fileName = `${user.id}-${Date.now()}.${fileExt}` // اسم فريد للصورة
+
+        const { error: uploadError } = await supabase.storage
+            .from('thumbnails')
+            .upload(fileName, thumbnailFile)
+
+        if (uploadError) {
+            return { error: 'حدث خطأ أثناء رفع الصورة. تأكد من أن حجمها معقول.' }
+        }
+
+        // جلب الرابط العام للصورة
+        const { data: urlData } = supabase.storage.from('thumbnails').getPublicUrl(fileName)
+        thumbnailUrl = urlData.publicUrl
     }
 
     const baseSlug = title.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '')
@@ -33,7 +52,7 @@ export async function createCourseAction(_prevState: { error?: string; success?:
         price: price,
         slug: slug,
         is_published: false,
-        thumbnail_url: thumbnailUrl?.trim() || null, // حفظ الرابط أو null
+        thumbnail_url: thumbnailUrl,
     })
 
     if (error) {

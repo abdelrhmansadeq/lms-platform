@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 'use client'
 
 import { useActionState } from 'react'
@@ -8,7 +9,6 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import Link from 'next/link'
 
-// ضفنا thumbnail_url هنا
 type CourseData = {
     id: string;
     title: string;
@@ -26,50 +26,36 @@ export function EditCourseForm({ course }: { course: CourseData }) {
 
             <div className="space-y-2">
                 <Label htmlFor="title">عنوان الكورس</Label>
-                <Input
-                    id="title"
-                    name="title"
-                    defaultValue={course.title}
-                    required
-                />
+                <Input id="title" name="title" defaultValue={course.title} required />
             </div>
 
             <div className="space-y-2">
                 <Label htmlFor="description">وصف الكورس</Label>
-                <Textarea
-                    id="description"
-                    name="description"
-                    defaultValue={course.description || ''}
-                    className="min-h-32"
-                />
+                <Textarea id="description" name="description" defaultValue={course.description || ''} className="min-h-32" />
             </div>
 
-            {/* خانة رابط الصورة الجديدة */}
             <div className="space-y-2">
-                <Label htmlFor="thumbnail_url">رابط صورة الغلاف (اختياري)</Label>
+                <Label htmlFor="thumbnail_file">صورة الغلاف</Label>
+
+                {course.thumbnail_url && (
+                    <div className="mb-4 w-48 h-28 rounded-md overflow-hidden border bg-zinc-100">
+                        <img src={course.thumbnail_url} alt="صورة الكورس الحالية" className="w-full h-full object-cover" />
+                    </div>
+                )}
+
                 <Input
-                    id="thumbnail_url"
-                    name="thumbnail_url"
-                    type="url"
-                    defaultValue={course.thumbnail_url || ''}
-                    dir="ltr"
-                    className="text-left"
-                    placeholder="https://example.com/image.jpg"
+                    id="thumbnail_file"
+                    name="thumbnail_file"
+                    type="file"
+                    accept="image/*"
+                    className="cursor-pointer file:text-primary file:font-semibold"
                 />
+                <p className="text-xs text-muted-foreground">اختر صورة جديدة إذا كنت تريد تغيير الصورة الحالية.</p>
             </div>
 
             <div className="space-y-2">
                 <Label htmlFor="price">السعر (بالجنيه المصري)</Label>
-                <Input
-                    id="price"
-                    name="price"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    defaultValue={course.price}
-                    dir="ltr"
-                    className="text-left"
-                />
+                <Input id="price" name="price" type="number" min="0" step="0.01" defaultValue={course.price} dir="ltr" className="text-left" />
             </div>
 
             {state?.error && (

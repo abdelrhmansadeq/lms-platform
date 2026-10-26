@@ -14,20 +14,46 @@ export async function updateCourseAction(_prevState: { error?: string; success?:
     const title = formData.get('title') as string
     const description = formData.get('description') as string
     const price = Number(formData.get('price')) || 0
-    // استقبال رابط الصورة
-    const thumbnailUrl = formData.get('thumbnail_url') as string
+    const thumbnailFile = formData.get('thumbnail_file') as File | null
 
     if (!title || title.trim().length < 3) {
         return { error: 'عنوان الكورس مطلوب (3 أحرف على الأقل)' }
     }
 
+    // 1. جلب بيانات الكورس الحالية عشان نحافظ على الصورة القديمة لو مفيش صورة جديدة
+    const { data: currentCourse } = await supabase
+        .from('courses')
+        .select('thumbnail_url')
+        .eq('id', courseId)
+        .single()
+
+    let newThumbnailUrl = currentCourse?.thumbnail_url || null
+
+    // 2. لو المدرس رفع صورة جديدة
+    if (thumbnailFile && thumbnailFile.size > 0) {
+        const fileExt = thumbnailFile.name.split('.').pop()
+        const fileName = `${user.id}-${Date.now()}.${fileExt}`
+
+        const { error: uploadError } = await supabase.storage
+            .from('thumbnails')
+            .upload(fileName, thumbnailFile)
+
+        if (!uploadError) {
+            const { data: urlData } = supabase.storage.from('thumbnails').getPublicUrl(fileName)
+            newThumbnailUrl = urlData.publicUrl
+        } else {
+            return { error: 'حدث خطأ أثناء رفع الصورة الجديدة.' }
+        }
+    }
+
+    // 3. تحديث الكورس
     const { error } = await supabase
         .from('courses')
         .update({
             title: title.trim(),
             description: description?.trim(),
             price: price,
-            thumbnail_url: thumbnailUrl?.trim() || null, // حفظ الرابط أو null
+            thumbnail_url: newThumbnailUrl,
         })
         .eq('id', courseId)
         .eq('instructor_id', user.id)
