@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import Link from 'next/link'
 
 export default function NewCoursePage() {
@@ -36,8 +36,22 @@ export default function NewCoursePage() {
                                 id="description"
                                 name="description"
                                 placeholder="اكتب وصفاً مختصراً عن محتوى الكورس وأهدافه..."
-                                className="min-h-[120px]"
+                                className="min-h-32"
                             />
+                        </div>
+
+                        {/* خانة رابط الصورة الجديدة */}
+                        <div className="space-y-2">
+                            <Label htmlFor="thumbnail_url">رابط صورة الغلاف (اختياري)</Label>
+                            <Input
+                                id="thumbnail_url"
+                                name="thumbnail_url"
+                                type="url"
+                                placeholder="https://example.com/image.jpg"
+                                dir="ltr"
+                                className="text-left"
+                            />
+                            <p className="text-xs text-muted-foreground">يمكنك رفع صورة على موقع مثل ImgBB ونسخ الرابط المباشر هنا.</p>
                         </div>
 
                         <div className="space-y-2">

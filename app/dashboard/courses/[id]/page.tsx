@@ -1,9 +1,13 @@
 import { createClient } from '@/lib/supabase/server'
 import { notFound, redirect } from 'next/navigation'
+import Link from 'next/link'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
 import { AddLessonForm } from './add-lesson-form'
 import { PublishButton } from './publish-button'
 import { ActivationCodes } from './activation-codes'
+import { DeleteLessonButton, DeleteCourseButton } from './delete-buttons'
+import { EditLessonDialog } from './edit-lesson-dialog'
 
 export default async function CourseManagePage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = await params;
@@ -29,7 +33,7 @@ export default async function CourseManagePage({ params }: { params: Promise<{ i
         .eq('course_id', course.id)
         .order('position', { ascending: true })
 
-    // جلب أكواد التفعيل الخاصة بالكورس
+    // جلب أكواد التفعيل
     const { data: activationCodes } = await supabase
         .from('activation_codes')
         .select('*')
@@ -44,11 +48,18 @@ export default async function CourseManagePage({ params }: { params: Promise<{ i
                     <h2 className="text-2xl font-bold">{course.title}</h2>
                     <p className="text-muted-foreground mt-1">{course.description}</p>
                 </div>
-                <div className="flex items-center gap-4">
+                <div className="flex flex-wrap items-center gap-2">
           <span className={`text-sm px-3 py-1 rounded-full ${course.is_published ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
             {course.is_published ? 'منشور للطلاب' : 'مسودة'}
           </span>
+
+                    {/* زرار التعديل الجديد */}
+                    <Link href={`/dashboard/courses/${course.id}/edit`}>
+                        <Button variant="outline" size="sm">تعديل</Button>
+                    </Link>
+
                     <PublishButton courseId={course.id} isPublished={course.is_published} />
+                    <DeleteCourseButton courseId={course.id} />
                 </div>
             </div>
 
@@ -71,13 +82,17 @@ export default async function CourseManagePage({ params }: { params: Promise<{ i
                                             <p className="text-xs text-muted-foreground" dir="ltr">ID: {lesson.youtube_id}</p>
                                         </div>
                                     </div>
+                                    <div className="flex items-center gap-2">
+                                        <EditLessonDialog lesson={lesson} courseId={course.id} />
+                                        <DeleteLessonButton lessonId={lesson.id} courseId={course.id} />
+                                    </div>
                                 </div>
                             ))}
                         </div>
                     )}
                 </div>
 
-                {/* العمود الجانبي: فورم إضافة درس + أكواد التفعيل */}
+                {/* العمود الجانبي */}
                 <div className="space-y-6">
                     <Card>
                         <CardHeader>

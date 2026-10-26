@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { Button } from '@/components/ui/button'
@@ -5,11 +6,8 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 
 export default async function DashboardPage() {
     const supabase = await createClient()
-
-    // جلب المستخدم الحالي
     const { data: { user } } = await supabase.auth.getUser()
 
-    // جلب كورسات المدرس دي
     const { data: courses } = await supabase
         .from('courses')
         .select('*')
@@ -28,7 +26,6 @@ export default async function DashboardPage() {
                 </Link>
             </div>
 
-            {/* لو مفيش كورسات */}
             {(!courses || courses.length === 0) ? (
                 <Card className="border-dashed">
                     <CardHeader className="text-center">
@@ -42,27 +39,31 @@ export default async function DashboardPage() {
                     </CardContent>
                 </Card>
             ) : (
-                /* لو فيه كورسات */
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {courses.map((course) => (
-                        <Card key={course.id} className="flex flex-col">
+                        <Card key={course.id} className="flex flex-col overflow-hidden">
+                            {/* صورة الكورس */}
+                            <div className="relative h-32 w-full bg-zinc-100 dark:bg-zinc-800 border-b">
+                                {course.thumbnail_url ? (
+                                    <img src={course.thumbnail_url} alt={course.title} className="w-full h-full object-cover" />
+                                ) : (
+                                    <div className="flex items-center justify-center w-full h-full text-muted-foreground text-xs">لا توجد صورة</div>
+                                )}
+                            </div>
+
                             <CardHeader>
                                 <div className="flex justify-between items-start mb-2">
                                     <CardTitle className="text-lg line-clamp-1" title={course.title}>
                                         {course.title}
                                     </CardTitle>
-                                    {/* حالة الكورس */}
                                     <span className={`text-xs px-2 py-1 rounded-full ${course.is_published ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
                     {course.is_published ? 'منشور' : 'مسودة'}
                   </span>
                                 </div>
-                                <CardDescription className="line-clamp-2 mt-2 h-10">
-                                    {course.description || 'لا يوجد وصف لهذا الكورس.'}
-                                </CardDescription>
                             </CardHeader>
 
                             <CardContent className="flex-1">
-                                <div className="text-sm font-medium mt-4">
+                                <div className="text-sm font-medium">
                                     السعر: {course.price === 0 ? 'مجاني' : `${course.price} ج.م`}
                                 </div>
                             </CardContent>

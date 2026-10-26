@@ -103,3 +103,74 @@ export async function generateActivationCodeAction(courseId: string) {
     revalidatePath(`/dashboard/courses/${courseId}`)
     return { success: 'تم توليد الكود بنجاح' }
 }
+
+// دالة حذف درس
+export async function deleteLessonAction(lessonId: string, courseId: string) {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { error: 'غير مصرح' }
+
+    // الحماية (RLS هيمنع برضه، بس دي حماية إضافية)
+    const { data: course } = await supabase.from('courses').select('instructor_id').eq('id', courseId).single()
+    if (course?.instructor_id !== user.id) return { error: 'غير مصرح لك' }
+
+    const { error } = await supabase.from('lessons').delete().eq('id', lessonId)
+
+    if (error) return { error: 'حدث خطأ أثناء حذف الدرس' }
+
+    revalidatePath(`/dashboard/courses/${courseId}`)
+    return { success: 'تم حذف الدرس بنجاح' }
+}
+
+// دالة حذف كورس كامل
+export async function deleteCourseAction(courseId: string) {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { error: 'غير مصرح' }
+
+    const { error } = await supabase.from('courses').delete().eq('id', courseId).eq('instructor_id', user.id)
+
+    if (error) return { error: 'حدث خطأ أثناء حذف الكورس' }
+
+    revalidatePath('/dashboard')
+    return { success: 'تم حذف الكورس بنجاح' }
+}
+
+// دالة تعديل الدرس
+export async function updateLessonAction(_prevState: { error?: string; success?: string } | null, formData: FormData) {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) return { error: 'غير مصرح' }
+
+    const lessonId = formData.get('lessonId') as string
+    const courseId = formData.get('courseId') as string
+    const title = formData.get('title') as string
+    const content = formData.get('content') as string
+    const youtubeUrlOrId = formData.get('youtube_id') as string
+
+    if (!title || !youtubeUrlOrId) {
+        return { error: 'العنوان ورابط اليوتيوب مطلوبان' }
+    }
+
+    // استخراج الـ ID (نفس الدالة اللي فوق، لو معملها export اعملها)
+    // هنستخدم نفس الـ Regex هنا للتأكد
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+    const match = youtubeUrlOrId.match(regExp);
+    const youtube_id = (match && match[2].length === 11) ? match[2] : youtubeUrlOrId.trim();
+
+    const { error } = await supabase
+        .from('lessons')
+        .update({
+            title,
+            content,
+            youtube_id
+        })
+        .eq('id', lessonId)
+        .eq('course_id', courseId)
+
+    if (error) return { error: error.message }
+
+    revalidatePath(`/dashboard/courses/${courseId}`)
+    return { success: 'تم تعديل الدرس بنجاح' }
+}

@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -34,7 +35,7 @@ export default async function CourseDetailsPage({ params }: { params: Promise<{ 
         if (enrollment) isEnrolled = true
     }
 
-    // جلب الدروس (بسبب الـ RLS، لو مش مشترك هترجع فاضية)
+    // جلب الدروس
     const { data: lessons } = await supabase
         .from('lessons')
         .select('*')
@@ -47,9 +48,21 @@ export default async function CourseDetailsPage({ params }: { params: Promise<{ 
 
                 {/* تفاصيل الكورس */}
                 <div className="lg:col-span-2 space-y-6">
+
+                    {/* صورة الغلاف الجديدة */}
+                    {course.thumbnail_url && (
+                        <div className="w-full h-64 md:h-80 rounded-xl overflow-hidden border shadow-sm relative bg-zinc-100 dark:bg-zinc-800">
+                            <img
+                                src={course.thumbnail_url}
+                                alt={course.title}
+                                className="w-full h-full object-cover"
+                            />
+                        </div>
+                    )}
+
                     <div>
                         <h1 className="text-3xl font-bold mb-4">{course.title}</h1>
-                        <p className="text-muted-foreground text-lg">{course.description}</p>
+                        <p className="text-muted-foreground text-lg whitespace-pre-wrap">{course.description}</p>
                     </div>
 
                     <Card>
