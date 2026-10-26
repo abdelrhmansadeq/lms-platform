@@ -1,29 +1,18 @@
 import { createClient } from '@/lib/supabase/server'
 import { notFound, redirect } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-// import { Button } from '@/components/ui/button'
-// import { Input } from '@/components/ui/input'
-// import { Label } from '@/components/ui/label'
-// import { Textarea } from '@/components/ui/textarea'
-// import { addLessonAction, togglePublishAction } from './actions'
-// import Link from 'next/link'
-
-// مكونات العميل (Client Components) المطلوبة للتفاعل
 import { AddLessonForm } from './add-lesson-form'
 import { PublishButton } from './publish-button'
+import { ActivationCodes } from './activation-codes'
 
-// التعديل هنا: نوع الـ params بقى Promise
 export default async function CourseManagePage({ params }: { params: Promise<{ id: string }> }) {
-    const supabase = await createClient()
-
-    // التعديل هنا: لازم await للـ params الأول
     const { id } = await params;
-
+    const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
 
     if (!user) redirect('/login')
 
-    // جلب الكورس (استخدمنا id بدل params.id)
+    // جلب الكورس
     const { data: course } = await supabase
         .from('courses')
         .select('*')
@@ -39,6 +28,13 @@ export default async function CourseManagePage({ params }: { params: Promise<{ i
         .select('*')
         .eq('course_id', course.id)
         .order('position', { ascending: true })
+
+    // جلب أكواد التفعيل الخاصة بالكورس
+    const { data: activationCodes } = await supabase
+        .from('activation_codes')
+        .select('*')
+        .eq('course_id', course.id)
+        .order('created_at', { ascending: false })
 
     return (
         <div className="space-y-8">
@@ -81,8 +77,8 @@ export default async function CourseManagePage({ params }: { params: Promise<{ i
                     )}
                 </div>
 
-                {/* فورم إضافة درس */}
-                <div>
+                {/* العمود الجانبي: فورم إضافة درس + أكواد التفعيل */}
+                <div className="space-y-6">
                     <Card>
                         <CardHeader>
                             <CardTitle>إضافة درس جديد</CardTitle>
@@ -90,6 +86,16 @@ export default async function CourseManagePage({ params }: { params: Promise<{ i
                         </CardHeader>
                         <CardContent>
                             <AddLessonForm courseId={course.id} />
+                        </CardContent>
+                    </Card>
+
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>إدارة الاشتراكات</CardTitle>
+                            <CardDescription>قم بتوليد أكواد لتفعيل الكورس للطلاب.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <ActivationCodes courseId={course.id} initialCodes={activationCodes || []} />
                         </CardContent>
                     </Card>
                 </div>

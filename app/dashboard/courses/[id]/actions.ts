@@ -69,3 +69,37 @@ export async function togglePublishAction(courseId: string, currentState: boolea
     revalidatePath('/dashboard')
     return { success: 'تم تحديث حالة الكورس' }
 }
+
+// دالة توليد كود تفعيل جديد
+export async function generateActivationCodeAction(courseId: string) {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) return { error: 'غير مصرح' }
+
+    // التأكد إن الكورس بتاع المدرس ده
+    const { data: course } = await supabase.from('courses').select('instructor_id').eq('id', courseId).single()
+    if (course?.instructor_id !== user.id) {
+        return { error: 'غير مصرح لك بتوليد أكواد لهذا الكورس' }
+    }
+
+    // توليد كود عشوائي آمن (مثال: ACT-A1B2C3)
+    // بنستخدم الدالة العشوائية ونحولها لأرقام وحروف إنجليزية
+    const randomString = Math.random().toString(36).substring(2, 8).toUpperCase()
+    const newCode = `ACT-${randomString}`
+
+    // حفظ الكود في قاعدة البيانات
+    const { error } = await supabase.from('activation_codes').insert({
+        code: newCode,
+        course_id: courseId,
+    })
+
+    if (error) {
+        // لو الكود اتكرر بالصدفة (احتمال ضعيف جدًا)
+        return { error: 'حدث خطأ أثناء توليد الكود، حاول مرة أخرى' }
+    }
+
+    // تحديث الصفحة عشان الكود الجديد يظهر
+    revalidatePath(`/dashboard/courses/${courseId}`)
+    return { success: 'تم توليد الكود بنجاح' }
+}
