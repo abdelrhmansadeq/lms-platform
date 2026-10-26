@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 
-export async function createCourseAction(prevState: any, formData: FormData) {
+export async function createCourseAction(_prevState: { error?: string; success?: string } | null, formData: FormData) {
     const supabase = await createClient()
 
     // التأكد من تسجيل الدخول

@@ -2,7 +2,18 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+
+// تعريف النوع عشان نمنع خطأ any
+type EnrollmentWithCourse = {
+    course_id: string;
+    courses: {
+        id: string;
+        title: string;
+        slug: string;
+        description: string | null;
+    } | null;
+};
 
 export default async function MyCoursesPage() {
     const supabase = await createClient()
@@ -30,7 +41,7 @@ export default async function MyCoursesPage() {
             </div>
 
             {(!enrollments || enrollments.length === 0) ? (
-                <div className="text-center py-20 bg-white dark:bg-zinc-900 rounded-lg border border-dashed">
+                <div className="text-center py-20 bg-card rounded-lg border border-dashed">
                     <h3 className="text-xl font-semibold mb-2">لم تشترك في أي كورس بعد</h3>
                     <p className="text-muted-foreground mb-6">تصفح الكورسات المتاحة وابدأ رحلتك التعليمية الآن.</p>
                     <Link href="/">
@@ -39,15 +50,17 @@ export default async function MyCoursesPage() {
                 </div>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {enrollments.map((enrollment: any) => {
+                    {/* استخدمنا النوع اللي عرفناه فوق بدل any */}
+                    {(enrollments as unknown as EnrollmentWithCourse[]).map((enrollment) => {
                         const course = enrollment.courses
-                        if (!course) return null // حماية لو الكورس اتمسح
+                        if (!course) return null
 
                         return (
                             <Card key={course.id} className="flex flex-col hover:shadow-lg transition-shadow">
                                 <CardHeader>
                                     <CardTitle className="line-clamp-1">{course.title}</CardTitle>
-                                    <CardDescription className="line-clamp-2 mt-2 min-h-[40px]">
+                                    {/* شلت min-h-[40px] وحطيت min-h-10 عشان تحذير Tailwind */}
+                                    <CardDescription className="line-clamp-2 mt-2 min-h-10">
                                         {course.description}
                                     </CardDescription>
                                 </CardHeader>

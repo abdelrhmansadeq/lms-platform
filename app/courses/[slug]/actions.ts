@@ -3,7 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 
-export async function enrollAction(prevState: any, formData: FormData) {
+export async function enrollAction(_prevState: { error?: string; success?: string } | null, formData: FormData) {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
 

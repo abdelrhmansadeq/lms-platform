@@ -3,7 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 
-export async function registerAction(prevState: any, formData: FormData) {
+export async function registerAction(_prevState: { error?: string; success?: string } | null, formData: FormData) {
     const email = formData.get('email') as string
     const password = formData.get('password') as string
     const fullName = formData.get('fullName') as string
@@ -14,12 +14,11 @@ export async function registerAction(prevState: any, formData: FormData) {
     }
 
     if (password.length < 6) {
-        return { error: 'كلمة المرور يجب أن تكون 66 أحرف على الأقل' }
+        return { error: 'كلمة المرور يجب أن تكون 6 أحرف على الأقل' }
     }
 
     const supabase = await createClient()
 
-    // إنشاء الحساب وتمرير الاسم والدور في الـ metadata عشان التريجر بتاعنا يقراهم
     const { error } = await supabase.auth.signUp({
         email,
         password,
@@ -35,6 +34,5 @@ export async function registerAction(prevState: any, formData: FormData) {
         return { error: error.message }
     }
 
-    // لو كله تمام، نوجهه لصفحة تسجيل الدخول
     redirect('/login')
 }

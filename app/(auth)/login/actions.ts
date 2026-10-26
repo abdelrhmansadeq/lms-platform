@@ -3,7 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 
-export async function loginAction(prevState: any, formData: FormData) {
+export async function loginAction(_prevState: { error?: string; success?: string } | null, formData: FormData) {
     const email = formData.get('email') as string
     const password = formData.get('password') as string
 

@@ -10,7 +10,7 @@ function extractYouTubeId(url: string) {
     return (match && match[2].length === 11) ? match[2] : url.trim(); // لو المستخدم حط الـ ID مباشرة
 }
 
-export async function addLessonAction(prevState: any, formData: FormData) {
+export async function addLessonAction(_prevState: { error?: string; success?: string } | null, formData: FormData) {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
 
