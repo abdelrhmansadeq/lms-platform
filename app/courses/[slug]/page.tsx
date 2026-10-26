@@ -1,11 +1,11 @@
-/* eslint-disable @next/next/no-img-element */
+import Image from 'next/image'
 import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 import { EnrollForm } from './enroll-form'
-import { CheckCircle2, Lock } from 'lucide-react'
+import { CheckCircle2, Lock, PlayCircle } from 'lucide-react'
 
 export default async function CourseDetailsPage({ params }: { params: Promise<{ slug: string }> }) {
     const { slug } = await params
@@ -40,27 +40,33 @@ export default async function CourseDetailsPage({ params }: { params: Promise<{ 
         .eq('course_id', course.id)
         .order('position', { ascending: true })
 
+    const blurDataURL = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=";
+
     return (
-        <div className="container mx-auto px-4 py-8 max-w-5xl">
+        <div className="container mx-auto px-4 md:px-6 lg:px-8 py-8 max-w-5xl">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
-                <div className="lg:col-span-2 space-y-6">
+                <div className="lg:col-span-2 space-y-6 animate-fade-up">
                     {course.thumbnail_url && (
                         <div className="w-full h-64 md:h-80 rounded-2xl overflow-hidden border border-border shadow-lg relative bg-muted">
-                            <img
+                            <Image
                                 src={course.thumbnail_url}
                                 alt={course.title}
-                                className="w-full h-full object-cover"
+                                fill
+                                priority
+                                placeholder="blur"
+                                blurDataURL={blurDataURL}
+                                className="object-cover"
                             />
                         </div>
                     )}
 
                     <div>
-                        <h1 className="text-3xl font-bold mb-4">{course.title}</h1>
+                        <h1 className="text-3xl md:text-4xl font-bold mb-4">{course.title}</h1>
                         <p className="text-muted-foreground text-lg whitespace-pre-wrap leading-relaxed">{course.description}</p>
                     </div>
 
-                    <Card className="bg-card border-border">
+                    <Card className="bg-card border-border shadow-sm animate-fade-up delay-100">
                         <CardHeader>
                             <CardTitle>محتوى الكورس</CardTitle>
                             <CardDescription>عدد الدروس: {lessons?.length || 0} درس</CardDescription>
@@ -73,8 +79,12 @@ export default async function CourseDetailsPage({ params }: { params: Promise<{ 
                                 </div>
                             ) : (
                                 <div className="space-y-3">
-                                    {lessons?.map((lesson) => (
-                                        <div key={lesson.id} className="flex items-center justify-between p-4 border border-border rounded-xl bg-background hover:bg-muted/30 transition-colors">
+                                    {lessons?.map((lesson, index) => (
+                                        <div
+                                            key={lesson.id}
+                                            className="flex items-center justify-between p-4 border border-border rounded-xl bg-background hover:bg-muted/50 transition-colors animate-fade-up"
+                                            style={{ animationDelay: `${(index + 2) * 100}ms` }}
+                                        >
                                             <div className="flex items-center gap-3">
                         <span className="w-8 h-8 flex items-center justify-center bg-primary/10 text-primary rounded-full text-sm font-bold">
                           {lesson.position}
@@ -83,7 +93,10 @@ export default async function CourseDetailsPage({ params }: { params: Promise<{ 
                                             </div>
                                             {isEnrolled && (
                                                 <Link href={`/learn/${course.slug}/${lesson.id}`}>
-                                                    <Button size="sm" variant="outline" className="border-primary/50 text-primary hover:bg-primary hover:text-white">مشاهدة</Button>
+                                                    <Button size="sm" variant="outline" className="border-primary/50 text-primary hover:bg-primary hover:text-primary-foreground transition-colors gap-2">
+                                                        <PlayCircle className="w-4 h-4" />
+                                                        مشاهدة
+                                                    </Button>
                                                 </Link>
                                             )}
                                         </div>
@@ -94,10 +107,11 @@ export default async function CourseDetailsPage({ params }: { params: Promise<{ 
                     </Card>
                 </div>
 
-                <div>
-                    <Card className="sticky top-24 bg-card border-border shadow-lg">
+                <div className="animate-fade-up delay-200">
+                    {/* صندوق الاشتراك لاصق (Sticky) */}
+                    <Card className="sticky top-24 bg-card border-border shadow-xl">
                         <CardHeader>
-                            <CardTitle className="text-3xl font-bold text-center">
+                            <CardTitle className="text-3xl font-bold text-center text-primary">
                                 {course.price === 0 ? 'مجاني' : `${course.price} ج.م`}
                             </CardTitle>
                         </CardHeader>
@@ -109,7 +123,7 @@ export default async function CourseDetailsPage({ params }: { params: Promise<{ 
                                 </div>
                             ) : isEnrolled ? (
                                 <div className="text-center space-y-4">
-                                    <div className="bg-green-500/10 text-green-500 p-4 rounded-xl text-sm font-medium flex items-center justify-center gap-2">
+                                    <div className="bg-emerald-500/10 text-emerald-500 p-4 rounded-xl text-sm font-medium flex items-center justify-center gap-2">
                                         <CheckCircle2 className="w-5 h-5" />
                                         أنت مشترك في هذا الكورس
                                     </div>
