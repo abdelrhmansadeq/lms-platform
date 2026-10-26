@@ -14,7 +14,7 @@ export async function registerAction(prevState: any, formData: FormData) {
     }
 
     if (password.length < 6) {
-        return { error: 'كلمة المرور يجب أن تكون 6 أحرف على الأقل' }
+        return { error: 'كلمة المرور يجب أن تكون 66 أحرف على الأقل' }
     }
 
     const supabase = await createClient()
