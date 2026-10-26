@@ -131,7 +131,7 @@ export default async function CourseDetailsPage({ params }: { params: Promise<{ 
                                 </div>
                             ) : (
                                 <div className="space-y-4">
-                                    <p className="text-sm text-muted-foreground text-center mb-2">لديك كود تفعيل؟ أدخله هنا للاشتراك.</p>
+                                    <p className="text-sm text-muted-foreground text-center mb-2">لديك كود تفعيل؟ أدخلة هنا للاشتراك.</p>
                                     <EnrollForm courseId={course.id} />
                                 </div>
                             )}
