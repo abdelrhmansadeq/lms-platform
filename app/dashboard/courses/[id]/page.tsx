@@ -9,6 +9,7 @@ import { ActivationCodes } from './activation-codes'
 import { DeleteLessonButton, DeleteCourseButton } from './delete-buttons'
 import { AttachmentManager } from './attachment-manager'
 import { EditLessonDialog } from './edit-lesson-dialog'
+import { BookOpen, FileQuestion, Edit, ClipboardList, PlayCircle } from 'lucide-react'
 
 export default async function CourseManagePage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = await params;
@@ -32,7 +33,6 @@ export default async function CourseManagePage({ params }: { params: Promise<{ i
         .eq('course_id', course.id)
         .order('position', { ascending: true })
 
-    // جلب المرفقات لكل دروس الكورس ده
     let allAttachments: any[] = []
     if (lessons && lessons.length > 0) {
         const lessonIds = lessons.map(l => l.id)
@@ -51,20 +51,28 @@ export default async function CourseManagePage({ params }: { params: Promise<{ i
         .order('created_at', { ascending: false })
 
     return (
-        <div className="space-y-8">
+        <div className="space-y-8 relative">
+
+            {/* Glow */}
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-[800px] h-[300px] bg-emerald-500/10 blur-[120px] rounded-full pointer-events-none -z-10" />
+
             {/* رأس الصفحة */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-zinc-50 dark:bg-zinc-900/50 p-6 rounded-xl border border-border">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white/[0.02] border border-white/5 p-6 rounded-3xl backdrop-blur-sm animate-fade-up">
                 <div>
-                    <h2 className="text-2xl font-bold">{course.title}</h2>
-                    <p className="text-muted-foreground mt-1">{course.description}</p>
+                    <h2 className="text-2xl font-bold text-white mb-2">{course.title}</h2>
+                    <p className="text-slate-400 text-sm">{course.description}</p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
-          <span className={`text-sm px-3 py-1 rounded-full ${course.is_published ? 'bg-emerald-500/10 text-emerald-500' : 'bg-yellow-500/10 text-yellow-500'}`}>
+          <span className={`text-xs px-3 py-1.5 rounded-full font-bold border ${course.is_published ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20'}`}>
             {course.is_published ? 'منشور للطلاب' : 'مسودة'}
           </span>
+
                     <Link href={`/dashboard/courses/${course.id}/edit`}>
-                        <Button variant="outline" size="sm">تعديل الكورس</Button>
+                        <Button variant="outline" size="sm" className="bg-white/5 border-white/10 text-slate-300 hover:bg-white/10 hover:text-white">
+                            <Edit className="w-4 h-4 ml-2" /> تعديل
+                        </Button>
                     </Link>
+
                     <PublishButton courseId={course.id} isPublished={course.is_published} />
                     <DeleteCourseButton courseId={course.id} />
                 </div>
@@ -72,29 +80,36 @@ export default async function CourseManagePage({ params }: { params: Promise<{ i
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* قائمة الدروس */}
-                <div className="lg:col-span-2 space-y-4">
-                    <h3 className="text-xl font-semibold border-b border-border pb-2">الدروس ({lessons?.length || 0})</h3>
+                <div className="lg:col-span-2 space-y-4 animate-fade-up delay-100">
+                    <div className="flex justify-between items-center border-b border-white/5 pb-4">
+                        <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                            <BookOpen className="w-6 h-6 text-emerald-400" />
+                            الدروس ({lessons?.length || 0})
+                        </h3>
+                    </div>
+
                     {lessons?.length === 0 ? (
-                        <p className="text-muted-foreground text-sm">لم تقم بإضافة أي دروس لهذا الكورس بعد.</p>
+                        <div className="text-center py-16 bg-white/[0.02] rounded-3xl border border-white/5 border-dashed">
+                            <p className="text-slate-400">لم تقم بإضافة أي دروس لهذا الكورس بعد.</p>
+                        </div>
                     ) : (
-                        <div className="space-y-3">
+                        <div className="space-y-2">
                             {lessons?.map((lesson) => {
-                                // فلترة المرفقات الخاصة بالدرس ده بس
                                 const lessonAttachments = allAttachments.filter(a => a.lesson_id === lesson.id)
 
                                 return (
-                                    <div key={lesson.id} className="flex items-center justify-between p-4 border border-border rounded-xl bg-card hover:bg-muted/30 transition-colors">
-                                        <div className="flex items-center gap-3">
-                      <span className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary font-bold text-sm shrink-0">
-                        {lesson.position}
-                      </span>
+                                    <div key={lesson.id} className="group flex items-center justify-between p-4 border border-white/5 rounded-2xl bg-white/[0.02] hover:bg-white/[0.04] transition-all duration-200">
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-10 h-10 rounded-full bg-[#0B0F17] border border-white/10 flex items-center justify-center shrink-0 group-hover:border-emerald-500/50 transition-colors">
+                                                <PlayCircle className="w-5 h-5 text-slate-500 group-hover:text-emerald-400" />
+                                            </div>
                                             <div>
-                                                <p className="font-medium line-clamp-1">{lesson.title}</p>
-                                                <p className="text-xs text-muted-foreground" dir="ltr">ID: {lesson.youtube_id}</p>
+                                                <p className="font-bold text-slate-200 line-clamp-1">{lesson.title}</p>
+                                                <p className="text-xs text-slate-500 font-mono mt-1" dir="ltr">ID: {lesson.youtube_id}</p>
                                             </div>
                                         </div>
-                                        {/* أزرار التعديل والحذف والمرفقات */}
-                                        <div className="flex items-center gap-1">
+
+                                        <div className="flex items-center gap-1 opacity-50 group-hover:opacity-100 transition-opacity">
                                             <AttachmentManager
                                                 lessonId={lesson.id}
                                                 courseId={course.id}
@@ -112,33 +127,41 @@ export default async function CourseManagePage({ params }: { params: Promise<{ i
                 </div>
 
                 {/* العمود الجانبي */}
-                <div className="space-y-6">
-                    <Card className="bg-card">
+                <div className="space-y-6 animate-fade-up delay-200">
+                    <Card className="bg-white/[0.02] border-white/5 shadow-sm rounded-3xl">
                         <CardHeader>
-                            <CardTitle>إضافة درس جديد</CardTitle>
-                            <CardDescription>سيتم إضافة الدرس في نهاية القائمة.</CardDescription>
+                            <CardTitle className="text-white">إضافة درس جديد</CardTitle>
+                            <CardDescription className="text-slate-400">سيتم إضافة الدرس في نهاية القائمة.</CardDescription>
                         </CardHeader>
                         <CardContent>
                             <AddLessonForm courseId={course.id} />
                         </CardContent>
                     </Card>
 
-                    <Card className="bg-card">
+                    <Card className="bg-white/[0.02] border-white/5 shadow-sm rounded-3xl">
                         <CardHeader>
-                            <CardTitle>الاختبارات</CardTitle>
-                            <CardDescription>إدارة اختبارات الكورس وأسئلتها.</CardDescription>
+                            <CardTitle className="text-white flex items-center gap-2">
+                                <FileQuestion className="w-5 h-5 text-emerald-400" />
+                                الاختبارات
+                            </CardTitle>
+                            <CardDescription className="text-slate-400">إدارة اختبارات الكورس وأسئلتها.</CardDescription>
                         </CardHeader>
                         <CardContent>
                             <Link href={`/dashboard/courses/${course.id}/quizzes`} className="w-full">
-                                <Button className="w-full" variant="secondary">إدارة الاختبارات</Button>
+                                <Button className="w-full bg-white/5 border-white/10 text-white hover:bg-white/10 transition-colors">
+                                    إدارة الاختبارات
+                                </Button>
                             </Link>
                         </CardContent>
                     </Card>
 
-                    <Card className="bg-card">
+                    <Card className="bg-white/[0.02] border-white/5 shadow-sm rounded-3xl">
                         <CardHeader>
-                            <CardTitle>إدارة الاشتراكات</CardTitle>
-                            <CardDescription>قم بتوليد أكواد لتفعيل الكورس للطلاب.</CardDescription>
+                            <CardTitle className="text-white flex items-center gap-2">
+                                <ClipboardList className="w-5 h-5 text-emerald-400" />
+                                إدارة الاشتراكات
+                            </CardTitle>
+                            <CardDescription className="text-slate-400">قم بتوليد أكواد لتفعيل الكورس للطلاب.</CardDescription>
                         </CardHeader>
                         <CardContent>
                             <ActivationCodes courseId={course.id} initialCodes={activationCodes || []} />

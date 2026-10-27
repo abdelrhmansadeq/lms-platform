@@ -14,7 +14,7 @@ export function ReplyForm({ postId }: { postId: string }) {
     useEffect(() => {
         if (state?.success) {
             toast.success(state.success)
-            formRef.current?.reset() // تفريغ الخانة بعد الرد
+            formRef.current?.reset()
         } else if (state?.error) {
             toast.error(state.error)
         }
@@ -27,12 +27,12 @@ export function ReplyForm({ postId }: { postId: string }) {
             <Textarea
                 name="content"
                 placeholder="اكتب ردك هنا..."
-                className="min-h-24 bg-background"
+                className="min-h-24 bg-black/20 border-white/10 focus-visible:ring-emerald-500 text-white placeholder:text-slate-500"
                 required
             />
 
             <div className="flex justify-end">
-                <Button type="submit" disabled={isPending} className="gap-2">
+                <Button type="submit" disabled={isPending} className="gap-2 bg-emerald-500 hover:bg-emerald-400 text-black font-bold shadow-[0_0_15px_-3px_rgba(16,185,129,0.4)]">
                     <Send className="w-4 h-4" />
                     {isPending ? 'جاري الإرسال...' : 'إرسال الرد'}
                 </Button>

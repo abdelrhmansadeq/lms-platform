@@ -27,37 +27,55 @@ export function ProfileForm({ profile }: { profile: ProfileData }) {
         <form action={formAction} className="space-y-6">
 
             <div className="space-y-2">
-                <Label>البريد الإلكتروني</Label>
-                <Input value={profile.email} disabled dir="ltr" className="text-left bg-zinc-100 dark:bg-zinc-900 cursor-not-allowed" />
+                <Label className="text-slate-300">البريد الإلكتروني</Label>
+                <Input
+                    value={profile.email}
+                    disabled
+                    dir="ltr"
+                    className="text-left bg-black/40 border-white/5 text-slate-500 cursor-not-allowed h-11"
+                />
+                <p className="text-xs text-slate-500">لا يمكن تغيير البريد الإلكتروني.</p>
             </div>
 
             <div className="space-y-2">
-                <Label>نوع الحساب</Label>
-                <Input value={profile.role === 'instructor' ? 'مدرس' : 'طالب'} disabled className="bg-zinc-100 dark:bg-zinc-900 cursor-not-allowed" />
+                <Label className="text-slate-300">نوع الحساب</Label>
+                <Input
+                    value={profile.role === 'instructor' ? 'مدرس' : 'طالب'}
+                    disabled
+                    className="bg-black/40 border-white/5 text-slate-500 cursor-not-allowed h-11"
+                />
             </div>
 
             <div className="space-y-2">
-                <Label htmlFor="full_name">الاسم الكامل</Label>
-                <Input id="full_name" name="full_name" defaultValue={profile.full_name || ''} required />
+                <Label htmlFor="full_name" className="text-slate-300">الاسم الكامل</Label>
+                <Input
+                    id="full_name"
+                    name="full_name"
+                    defaultValue={profile.full_name || ''}
+                    className="bg-black/20 border-white/10 focus-visible:ring-emerald-500 text-white h-11"
+                    required
+                />
             </div>
 
-            {/* خانة النبذة (تظهر للمدرس بس) */}
             {profile.role === 'instructor' && (
                 <div className="space-y-2">
-                    <Label htmlFor="bio">نبذة عنك (Bio)</Label>
+                    <Label htmlFor="bio" className="text-slate-300">نبذة عنك (Bio)</Label>
                     <Textarea
                         id="bio"
                         name="bio"
                         defaultValue={profile.bio || ''}
-                        placeholder="اكتب نبذة مختصرة عن خبراتك ومؤهلاتك التعليمية..."
-                        className="min-h-32"
+                        placeholder="اكتب نبذة مختصرة عن خبراتك..."
+                        className="min-h-32 bg-black/20 border-white/10 focus-visible:ring-emerald-500 text-white placeholder:text-slate-500"
                     />
-                    <p className="text-xs text-muted-foreground">هذه النبذة ستظهر للطلاب في صفحتك الشخصية.</p>
                 </div>
             )}
 
-            <div className="flex justify-end pt-4">
-                <Button type="submit" disabled={isPending}>
+            <div className="flex justify-end pt-4 border-t border-white/5">
+                <Button
+                    type="submit"
+                    disabled={isPending}
+                    className="bg-emerald-500 hover:bg-emerald-400 text-black font-bold h-11 px-8 shadow-[0_0_20px_-5px_rgba(16,185,129,0.6)]"
+                >
                     {isPending ? 'جاري الحفظ...' : 'حفظ التعديلات'}
                 </Button>
             </div>

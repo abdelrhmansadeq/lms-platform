@@ -5,8 +5,8 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardDescription, CardFooter, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
+import { BookOpen } from 'lucide-react'
 
-// تعريف الأنواع (Types) بدل any
 type CourseData = {
     id: string;
     title: string;
@@ -41,11 +41,9 @@ export default async function MyCoursesPage() {
         .eq('student_id', user.id)
         .order('enrolled_at', { ascending: false })
 
-    // استخدمنا const بدل let
     const coursesWithProgress: CourseWithProgress[] = []
 
     if (enrollments && enrollments.length > 0) {
-        // عملنا Casting للنوع عشان نتجنب any
         for (const enrollment of (enrollments as unknown as EnrollmentData[])) {
             const course = enrollment.courses
             if (!course) continue
@@ -76,18 +74,28 @@ export default async function MyCoursesPage() {
     const blurDataURL = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=";
 
     return (
-        <div className="container mx-auto px-4 md:px-6 lg:px-8 py-12 max-w-5xl">
-            <div className="mb-8 animate-fade-up">
-                <h1 className="text-3xl font-bold mb-2">كورساتي</h1>
-                <p className="text-muted-foreground">هنا تجد جميع الكورسات التي قمت بالاشتراك فيها.</p>
+        <div className="container mx-auto px-4 md:px-6 lg:px-8 py-12 max-w-5xl relative">
+
+            {/* Glow */}
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-[600px] h-[300px] bg-emerald-500/10 blur-[120px] rounded-full pointer-events-none -z-10" />
+
+            <div className="mb-10 animate-fade-up border-b border-white/5 pb-6">
+                <h1 className="text-3xl font-bold mb-2 text-white flex items-center gap-3">
+                    <BookOpen className="w-8 h-8 text-emerald-400" />
+                    كورساتي
+                </h1>
+                <p className="text-slate-400">هنا تجد جميع الكورسات التي قمت بالاشتراك فيها.</p>
             </div>
 
             {(!coursesWithProgress || coursesWithProgress.length === 0) ? (
-                <div className="text-center py-20 bg-card rounded-xl border border-dashed border-border animate-fade-in">
-                    <h3 className="text-xl font-semibold mb-2">لم تشترك في أي كورس بعد</h3>
-                    <p className="text-muted-foreground mb-6">تصفح الكورسات المتاحة وابدأ رحلتك التعليمية الآن.</p>
+                <div className="text-center py-24 bg-white/[0.02] rounded-3xl border border-white/5 animate-fade-in backdrop-blur-sm">
+                    <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <BookOpen className="w-10 h-10 text-slate-500" />
+                    </div>
+                    <h3 className="text-2xl font-semibold mb-2 text-white">لم تشترك في أي كورس بعد</h3>
+                    <p className="text-slate-400 mb-8">تصفح الكورسات المتاحة وابدأ رحلتك التعليمية الآن.</p>
                     <Link href="/">
-                        <Button>تصفح الكورسات</Button>
+                        <Button size="lg" className="bg-emerald-500 hover:bg-emerald-400 text-black font-bold shadow-[0_0_20px_-5px_rgba(16,185,129,0.6)]">تصفح الكورسات</Button>
                     </Link>
                 </div>
             ) : (
@@ -95,36 +103,39 @@ export default async function MyCoursesPage() {
                     {coursesWithProgress.map((course, index) => (
                         <Card
                             key={course.id}
-                            className="flex flex-col hover:shadow-lg transition-shadow overflow-hidden bg-card border-border group animate-fade-up"
+                            className="flex flex-col bg-white/[0.02] border-white/5 hover:border-emerald-500/50 transition-all duration-300 hover:shadow-[0_10px_40px_-10px_rgba(16,185,129,0.2)] hover:-translate-y-2 group animate-fade-up overflow-hidden rounded-3xl"
                             style={{ animationDelay: `${index * 100}ms` }}
                         >
-                            <div className="relative h-40 w-full bg-muted border-b border-border overflow-hidden">
+                            <div className="relative h-40 w-full bg-slate-800 overflow-hidden">
                                 {course.thumbnail_url ? (
-                                    <Image src={course.thumbnail_url} alt={course.title} fill placeholder="blur" blurDataURL={blurDataURL} className="object-cover group-hover:scale-105 transition-transform duration-500" />
+                                    <Image src={course.thumbnail_url} alt={course.title} fill placeholder="blur" blurDataURL={blurDataURL} className="object-cover group-hover:scale-105 transition-transform duration-500 opacity-80 group-hover:opacity-100" />
                                 ) : (
-                                    <div className="flex items-center justify-center w-full h-full text-muted-foreground text-sm">لا توجد صورة</div>
+                                    <div className="flex items-center justify-center w-full h-full text-slate-500 text-sm">لا توجد صورة</div>
                                 )}
+                                <div className="absolute inset-0 bg-gradient-to-t from-[#0B0F17] to-transparent opacity-80" />
                             </div>
 
-                            <CardHeader className="pb-2">
-                                <CardTitle className="line-clamp-1 group-hover:text-primary transition-colors">{course.title}</CardTitle>
-                                {/* هنا صلحنا min-h-[40px] لـ min-h-10 */}
-                                <CardDescription className="line-clamp-2 mt-2 min-h-10">
+                            <CardHeader className="pb-2 relative z-10">
+                                <CardTitle className="line-clamp-1 group-hover:text-emerald-400 transition-colors text-white">{course.title}</CardTitle>
+                                <CardDescription className="line-clamp-2 mt-2 min-h-10 text-slate-400">
                                     {course.description}
                                 </CardDescription>
                             </CardHeader>
 
-                            <CardContent className="flex-1 pb-4">
-                                <div className="flex justify-between items-center mb-2 text-xs font-medium">
-                                    <span className="text-muted-foreground">نسبة الإنجاز</span>
-                                    <span className="text-primary">{course.progressPercent}%</span>
+                            <CardContent className="flex-1 pb-4 relative z-10">
+                                <div className="flex justify-between items-center mb-2 text-xs font-bold">
+                                    <span className="text-slate-400">نسبة الإنجاز</span>
+                                    <span className="text-emerald-400">{course.progressPercent}%</span>
                                 </div>
-                                <Progress value={course.progressPercent} className="h-2" />
+                                {/* شريط تقدم بتوهج أخضر */}
+                                <div className="h-2 w-full bg-white/10 rounded-full overflow-hidden">
+                                    <div className="h-full bg-emerald-500 rounded-full shadow-[0_0_10px_rgba(16,185,129,0.8)] transition-all duration-500" style={{ width: `${course.progressPercent}%` }} />
+                                </div>
                             </CardContent>
 
-                            <CardFooter className="pt-4 border-t border-border">
+                            <CardFooter className="pt-4 border-t border-white/5 relative z-10 bg-black/20">
                                 <Link href={`/courses/${course.slug}`} className="w-full">
-                                    <Button className="w-full bg-secondary text-secondary-foreground hover:bg-primary hover:text-primary-foreground transition-all">
+                                    <Button className="w-full bg-white/5 text-white hover:bg-emerald-500 hover:text-black transition-all border border-white/10 hover:border-emerald-500 font-bold">
                                         {course.progressPercent === 100 ? 'مراجعة الكورس' : 'متابعة التعلم'}
                                     </Button>
                                 </Link>
