@@ -3,8 +3,8 @@ import Image from 'next/image'
 import { createClient } from '@/lib/supabase/server'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Search } from 'lucide-react'
+import { WishlistButton } from '@/components/wishlist-button'
 
 export default async function Home({
                                        searchParams
@@ -14,6 +14,21 @@ export default async function Home({
     const supabase = await createClient()
     const { q } = await searchParams
     const searchQuery = q?.trim() || ''
+
+    const { data: { user } } = await supabase.auth.getUser()
+    let wishlistedCourseIds: string[] = []
+
+    // لو الطالب مسجل دخول، نجيب الكورسات اللي في مفضلته
+    if (user) {
+        const { data: wishlist } = await supabase
+            .from('wishlists')
+            .select('course_id')
+            .eq('student_id', user.id)
+
+        if (wishlist) {
+            wishlistedCourseIds = wishlist.map(w => w.course_id)
+        }
+    }
 
     let query = supabase
         .from('courses')
@@ -26,13 +41,12 @@ export default async function Home({
 
     const { data: courses } = await query.order('created_at', { ascending: false })
 
-    // صورة الـ Blur الوهمية (Base64) عشان تظهر مكان الصورة وهي بتتحمل
     const blurDataURL = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=";
 
     return (
         <div className="container mx-auto px-4 md:px-6 lg:px-8 py-12">
             <div className="text-center mb-12 animate-fade-up">
-                <h1 className="text-4xl md:text-5xl font-extrabold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-primary to-emerald-300">
+                <h1 className="text-4xl md:text-5xl font-extrabold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-primary to-emerald-400">
                     اكتشف مسارك التعليمي
                 </h1>
                 <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
@@ -70,7 +84,7 @@ export default async function Home({
                     <p className="text-muted-foreground mb-6">جرب البحث بكلمات أخرى أو تصفح جميع الكورسات.</p>
                     {searchQuery && (
                         <Link href="/">
-                            <Button variant="outline" className="transition-colors hover:bg-primary hover:text-white">عرض كل الكورسات</Button>
+                            <Button variant="outline">عرض كل الكورسات</Button>
                         </Link>
                     )}
                 </div>
@@ -80,11 +94,17 @@ export default async function Home({
                         <Link
                             href={`/courses/${course.slug}`}
                             key={course.id}
-                            // هنا سر الصنعة: استخدام group وتأثيرات Hover الناعمة جداً
                             className="group block bg-card rounded-xl overflow-hidden border border-border hover:border-primary/30 transition-all duration-300 hover:shadow-2xl hover:shadow-primary/10 hover:-translate-y-2 animate-fade-up"
                             style={{ animationDelay: `${index * 100}ms` }}
                         >
                             <div className="relative h-48 w-full bg-muted border-b border-border overflow-hidden">
+                                {/* زرار المفضلة */}
+                                <WishlistButton
+                                    courseId={course.id}
+                                    initialIsWishlisted={wishlistedCourseIds.includes(course.id)}
+                                    isLoggedIn={!!user}
+                                />
+
                                 {course.thumbnail_url ? (
                                     <Image
                                         src={course.thumbnail_url}
@@ -106,7 +126,7 @@ export default async function Home({
                                 <h3 className="text-xl font-semibold mb-2 line-clamp-1 text-foreground group-hover:text-primary transition-colors duration-300">
                                     {course.title}
                                 </h3>
-                                <p className="text-sm text-muted-foreground line-clamp-2 min-h-[40px] mb-4">
+                                <p className="text-sm text-muted-foreground line-clamp-2 min-h-10 mb-4">
                                     {course.description || 'لا يوجد وصف لهذا الكورس.'}
                                 </p>
 

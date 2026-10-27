@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { logoutAction } from '@/actions/auth'
 import { BottomNav } from './bottom-nav'
 import { NotificationsBell } from './notifications-bell'
+import { Heart } from 'lucide-react'
 
 export async function Navbar() {
     const supabase = await createClient()
@@ -13,11 +14,9 @@ export async function Navbar() {
     let notifications = []
 
     if (user) {
-        // جلب البروفايل
         const { data } = await supabase.from('profiles').select('full_name, role').eq('id', user.id).single()
         profile = data
 
-        // جلب أحدث 10 إشعارات
         const { data: notifs } = await supabase
             .from('notifications')
             .select('*')
@@ -48,6 +47,11 @@ export async function Navbar() {
                                     المنتدى
                                 </Link>
 
+                                {/* لينك المفضلة */}
+                                <Link href="/wishlist" className="hover:text-primary transition-colors flex items-center gap-1">
+                                    المفضلة
+                                </Link>
+
                                 {profile?.role === 'instructor' && (
                                     <Link href="/dashboard" className="hover:text-primary transition-colors">
                                         لوحة التحكم
@@ -64,7 +68,6 @@ export async function Navbar() {
                     <div className="flex items-center gap-4">
                         {user ? (
                             <>
-                                {/* جرس الإشعارات */}
                                 <NotificationsBell initialNotifications={notifications} />
 
                                 <div className="text-sm text-left hidden sm:block border-r border-border pr-4">
