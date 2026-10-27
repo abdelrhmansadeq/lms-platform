@@ -10,6 +10,7 @@ export async function updateProfileAction(_prevState: { error?: string; success?
     if (!user) return { error: 'غير مصرح' }
 
     const fullName = formData.get('full_name') as string
+    const bio = formData.get('bio') as string
 
     if (!fullName || fullName.trim().length < 3) {
         return { error: 'الاسم مطلوب (3 أحرف على الأقل)' }
@@ -17,12 +18,14 @@ export async function updateProfileAction(_prevState: { error?: string; success?
 
     const { error } = await supabase
         .from('profiles')
-        .update({ full_name: fullName.trim() })
+        .update({
+            full_name: fullName.trim(),
+            bio: bio?.trim() || null
+        })
         .eq('id', user.id)
 
     if (error) return { error: 'حدث خطأ أثناء تحديث البيانات' }
 
-    // تحديث الكاش عشان الاسم الجديد يظهر في الـ Navbar فورًا
     revalidatePath('/profile')
     revalidatePath('/', 'layout')
 

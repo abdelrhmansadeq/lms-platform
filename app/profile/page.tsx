@@ -12,7 +12,7 @@ export default async function ProfilePage() {
     // جلب بيانات البروفايل
     const { data: profile } = await supabase
         .from('profiles')
-        .select('full_name, role')
+        .select('full_name, role, bio')
         .eq('id', user.id)
         .single()
 
@@ -30,7 +30,8 @@ export default async function ProfilePage() {
                         profile={{
                             full_name: profile?.full_name || null,
                             email: user.email || '',
-                            role: profile?.role || 'student'
+                            role: profile?.role || 'student',
+                            bio: profile?.bio || null
                         }}
                     />
                 </CardContent>

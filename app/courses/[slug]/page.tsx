@@ -26,20 +26,41 @@ type QuizData = {
     title: string;
 };
 
+// تعريف نوع الكورس مع بيانات المدرس
+type CourseWithInstructor = {
+    id: string;
+    instructor_id: string;
+    title: string;
+    slug: string;
+    description: string | null;
+    thumbnail_url: string | null;
+    price: number;
+    is_published: boolean;
+    profiles: {
+        full_name: string | null;
+    } | null;
+};
+
 export default async function CourseDetailsPage({ params }: { params: Promise<{ slug: string }> }) {
     const { slug } = await params
     const supabase = await createClient()
 
     const { data: { user } } = await supabase.auth.getUser()
 
-    const { data: course } = await supabase
+    // جلب الكورس مع اسم المدرس
+    const { data: courseData } = await supabase
         .from('courses')
-        .select('*')
+        .select(`
+      *,
+      profiles (full_name)
+    `)
         .eq('slug', slug)
         .eq('is_published', true)
         .single()
 
-    if (!course) notFound()
+    if (!courseData) notFound()
+
+    const course = courseData as unknown as CourseWithInstructor
 
     let isEnrolled = false
     if (user) {
@@ -52,14 +73,14 @@ export default async function CourseDetailsPage({ params }: { params: Promise<{ 
         if (enrollment) isEnrolled = true
     }
 
-    // 1. جلب الدروس
+    // جلب الدروس
     const { data: lessons } = await supabase
         .from('lessons')
         .select('*')
         .eq('course_id', course.id)
         .order('position', { ascending: true })
 
-    // 2. جلب الاختبارات
+    // جلب الاختبارات
     const { data: quizzesData } = await supabase
         .from('quizzes')
         .select('id, title')
@@ -68,7 +89,7 @@ export default async function CourseDetailsPage({ params }: { params: Promise<{ 
 
     const quizzes = quizzesData as QuizData[] || []
 
-    // 3. جلب التقييمات
+    // جلب التقييمات
     const { data: reviews } = await supabase
         .from('reviews')
         .select(`
@@ -86,7 +107,7 @@ export default async function CourseDetailsPage({ params }: { params: Promise<{ 
 
     const myReview = user ? typedReviews.find(r => r.student_id === user.id) : null
 
-    // 4. حساب التقدم
+    // حساب التقدم
     let completedLessonIds: string[] = []
     let courseProgress = 0
 
@@ -121,6 +142,17 @@ export default async function CourseDetailsPage({ params }: { params: Promise<{ 
 
                     <div>
                         <h1 className="text-3xl md:text-4xl font-bold mb-2">{course.title}</h1>
+
+                        {/* لينك صفحة المدرس */}
+                        <div className="mb-4">
+                            <Link
+                                href={`/instructors/${course.instructor_id}`}
+                                className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors bg-muted/50 px-3 py-1.5 rounded-full"
+                            >
+                                <UserCircle2 className="w-4 h-4" />
+                                بواسطة: <span className="font-semibold text-foreground">{course.profiles?.full_name || 'مدرس'}</span>
+                            </Link>
+                        </div>
 
                         <div className="flex items-center gap-2 mb-4">
                             <span className="text-yellow-500 font-bold text-lg">{avgRating}</span>
@@ -174,7 +206,7 @@ export default async function CourseDetailsPage({ params }: { params: Promise<{ 
                                 </div>
                             )}
 
-                            {/* قسم الاختبارات الجديد */}
+                            {/* قسم الاختبارات */}
                             {isEnrolled && quizzes.length > 0 && (
                                 <div className="mt-8 pt-6 border-t border-border">
                                     <h4 className="font-bold text-xl mb-4 flex items-center gap-2">
