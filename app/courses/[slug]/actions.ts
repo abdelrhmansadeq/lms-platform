@@ -3,41 +3,62 @@
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 
+// 1. اشتراك بكود تفعيل
 export async function enrollAction(_prevState: { error?: string; success?: string } | null, formData: FormData) {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
 
-    if (!user) {
-        return { error: 'يجب تسجيل الدخول أولاً للاشتراك' }
-    }
+    if (!user) return { error: 'يجب تسجيل الدخول أولاً للاشتراك' }
 
     const code = formData.get('code') as string
     const courseId = formData.get('courseId') as string
 
-    if (!code) {
-        return { error: 'يرجى إدخال كود التفعيل' }
-    }
+    if (!code) return { error: 'يرجى إدخال كود التفعيل' }
 
-    // تحويل الكود لحروف كبيرة وإزالة المسافات الزائدة
     const cleanCode = code.trim().toUpperCase()
 
-    // استدعاء دالة قاعدة البيانات اللي عملناها
     const { data, error } = await supabase.rpc('enroll_with_code', {
         p_student_id: user.id,
         p_course_id: courseId,
-        p_code: cleanCode // بنبعت الكود النظيف هنا
+        p_code: cleanCode
     })
 
-    if (error) {
-        console.error("RPC Error:", error)
-        return { error: 'حدث خطأ في النظام، يرجى المحاولة لاحقاً' }
-    }
+    if (error) return { error: 'حدث خطأ في النظام، يرجى المحاولة لاحقاً' }
+    if (data.error) return { error: data.error }
 
-    if (data.error) {
-        return { error: data.error }
-    }
-
-    // تحديث الصفحة عشان تظهر الدروس
     revalidatePath(`/courses/[slug]`, 'page')
     return { success: data.success }
+}
+
+// 2. إضافة أو تعديل تقييم
+export async function submitReviewAction(_prevState: { error?: string; success?: string } | null, formData: FormData) {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) return { error: 'يجب تسجيل الدخول' }
+
+    const courseId = formData.get('courseId') as string
+    const rating = Number(formData.get('rating'))
+    const comment = formData.get('comment') as string
+
+    if (!rating || rating < 1 || rating > 5) {
+        return { error: 'يرجى اختيار تقييم من 1 إلى 5 نجوم' }
+    }
+
+    // استخدام Upsert عشان لو قيّم قبل كده يتحدث تقييمه بدل ما يضرب إيرور
+    const { error } = await supabase
+        .from('reviews')
+        .upsert({
+            course_id: courseId,
+            student_id: user.id,
+            rating,
+            comment: comment?.trim(),
+        }, {
+            onConflict: 'student_id, course_id'
+        })
+
+    if (error) return { error: error.message }
+
+    revalidatePath(`/courses/[slug]`, 'page')
+    return { success: 'تم حفظ تقييمك بنجاح. شكراً لك!' }
 }

@@ -2,7 +2,8 @@ import { createClient } from '@/lib/supabase/server'
 import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
-import { ArrowRight, PlayCircle } from 'lucide-react'
+import { ArrowRight, PlayCircle, CheckCircle2 } from 'lucide-react'
+import { VideoPlayer } from './video-player' // هنعمل المكون ده تحت
 
 export default async function LessonPlayerPage({
                                                    params
@@ -30,9 +31,7 @@ export default async function LessonPlayerPage({
         .eq('course_id', course.id)
         .single()
 
-    if (!enrollment) {
-        redirect(`/courses/${courseslug}`)
-    }
+    if (!enrollment) redirect(`/courses/${courseslug}`)
 
     const { data: lesson } = await supabase
         .from('lessons')
@@ -43,8 +42,16 @@ export default async function LessonPlayerPage({
 
     if (!lesson) notFound()
 
+    // جلب التقدم الحالي للطالب في الدرس ده
+    const { data: progress } = await supabase
+        .from('lesson_progress')
+        .select('watched_seconds, is_completed')
+        .eq('student_id', user.id)
+        .eq('lesson_id', lesson.id)
+        .single()
+
     return (
-        <div className="container mx-auto px-4 py-8 max-w-5xl">
+        <div className="container mx-auto px-4 md:px-6 lg:px-8 py-8 max-w-5xl">
             <div className="flex items-center justify-between mb-6">
                 <Link href={`/courses/${course.slug}`}>
                     <Button variant="ghost" className="gap-2 hover:bg-muted">
@@ -57,15 +64,13 @@ export default async function LessonPlayerPage({
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <div className="lg:col-span-2 space-y-6">
-                    <div className="aspect-video w-full rounded-2xl overflow-hidden border border-border bg-black shadow-2xl relative">
-                        <iframe
-                            className="absolute top-0 left-0 w-full h-full"
-                            src={`https://www.youtube.com/embed/${lesson.youtube_id}?rel=0&modestbranding=1&showinfo=0`}
-                            title={lesson.title}
-                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                            allowFullScreen
-                        ></iframe>
-                    </div>
+                    {/* مشغل الفيديو التفاعلي */}
+                    <VideoPlayer
+                        youtubeId={lesson.youtube_id}
+                        lessonId={lesson.id}
+                        courseId={course.id}
+                        initialProgress={progress?.watched_seconds || 0}
+                    />
 
                     <div className="bg-card p-6 rounded-2xl border border-border">
                         <h2 className="text-2xl font-bold mb-2 flex items-center gap-3">
@@ -74,6 +79,12 @@ export default async function LessonPlayerPage({
               </span>
                             {lesson.title}
                         </h2>
+                        {progress?.is_completed && (
+                            <div className="flex items-center gap-2 text-emerald-500 text-sm font-medium mb-4 bg-emerald-500/10 p-2 rounded w-fit">
+                                <CheckCircle2 className="w-4 h-4" />
+                                لقد أكملت هذا الدرس
+                            </div>
+                        )}
                         <div className="prose dark:prose-invert max-w-none mt-4 text-muted-foreground whitespace-pre-wrap leading-relaxed">
                             {lesson.content || 'لا يوجد محتوى نصي مرفق مع هذا الدرس.'}
                         </div>
