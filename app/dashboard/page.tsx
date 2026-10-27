@@ -2,38 +2,101 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { createClient } from '@/lib/supabase/server'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
-import { BookOpen, Users, Wallet, Plus } from 'lucide-react'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { BookOpen, Users, Wallet, Plus, TrendingUp } from 'lucide-react'
+import { DashboardChart } from './dashboard-chart'
+
+// 1. تعريف نوع لبيانات الشهور عشان نحل مشكلة any
+type MonthData = {
+    monthIndex: number;
+    year: number;
+    name: string;
+    revenue: number;
+};
+
+type CourseData = {
+    id: string;
+    price: number;
+    title: string;
+    is_published: boolean;
+    thumbnail_url: string | null;
+    created_at: string;
+}
+
+type EnrollmentData = {
+    course_id: string;
+    enrolled_at: string;
+}
 
 export default async function DashboardPage() {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
 
-    const { data: courses } = await supabase
+    const { data: coursesData } = await supabase
         .from('courses')
         .select('*')
         .eq('instructor_id', user?.id)
         .order('created_at', { ascending: false })
 
-    const totalCourses = courses?.length || 0
+    const courses = (coursesData as unknown as CourseData[]) || []
+    const totalCourses = courses.length
     let totalStudents = 0
     let totalRevenue = 0
+    let chartData: { name: string, revenue: number }[] = []
 
-    if (courses && courses.length > 0) {
+    if (courses.length > 0) {
         const courseIds = courses.map(c => c.id)
-        const { data: enrollments } = await supabase
+
+        // بنجيب الاشتراكات مع تاريخها
+        const { data: enrollmentsData } = await supabase
             .from('enrollments')
-            .select('course_id')
+            .select('course_id, enrolled_at')
             .in('course_id', courseIds)
 
-        if (enrollments) {
+        const enrollments = (enrollmentsData as unknown as EnrollmentData[]) || []
+
+        if (enrollments.length > 0) {
             totalStudents = enrollments.length
+
+            // 1. حساب إجمالي الأرباح
             enrollments.forEach((enrollment) => {
                 const course = courses.find(c => c.id === enrollment.course_id)
                 if (course) {
                     totalRevenue += Number(course.price)
                 }
             })
+
+            // 2. تجهيز بيانات الرسم البياني (آخر 6 شهور)
+            const months = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر']
+
+            const today = new Date()
+            // التعديل هنا: استخدمنا النوع MonthData
+            const last6Months: MonthData[] = []
+            for (let i = 5; i >= 0; i--) {
+                const d = new Date(today.getFullYear(), today.getMonth() - i, 1)
+                last6Months.push({
+                    monthIndex: d.getMonth(),
+                    year: d.getFullYear(),
+                    name: months[d.getMonth()],
+                    revenue: 0
+                })
+            }
+
+            // بنلف على الاشتراكات ونجمع أرباح كل شهر
+            enrollments.forEach((enrollment) => {
+                const enrollDate = new Date(enrollment.enrolled_at)
+                const course = courses.find(c => c.id === enrollment.course_id)
+
+                if (course) {
+                    // التعديل هنا: m بقت معروفة النوع عشان last6Months معروف
+                    const monthData = last6Months.find(m => m.monthIndex === enrollDate.getMonth() && m.year === enrollDate.getFullYear())
+                    if (monthData) {
+                        monthData.revenue += Number(course.price)
+                    }
+                }
+            })
+
+            chartData = last6Months.map(m => ({ name: m.name, revenue: m.revenue }))
         }
     }
 
@@ -42,14 +105,15 @@ export default async function DashboardPage() {
     return (
         <div className="space-y-8 relative">
 
-            {/* Glow */}
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-[800px] h-[300px] bg-emerald-500/10 blur-[120px] rounded-full pointer-events-none -z-10" />
+            {/* التعديل هنا: استخدام max-w-200 و h-75 */}
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-200 h-75 bg-emerald-500/10 blur-[120px] rounded-full pointer-events-none -z-10" />
 
-            {/* كروت الإحصائيات (زجاجية بتوهج) */}
+            {/* كروت الإحصائيات */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-fade-up">
 
-                <Card className="bg-white/[0.02] border-white/5 text-white overflow-hidden relative">
-                    <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-transparent pointer-events-none" />
+                {/* التعديل هنا: استخدام bg-white/2 و bg-linear-to-br */}
+                <Card className="bg-white/2 border-white/5 text-white overflow-hidden relative">
+                    <div className="absolute inset-0 bg-linear-to-br from-emerald-500/10 to-transparent pointer-events-none" />
                     <CardHeader className="flex flex-row items-center justify-between pb-2 relative z-10">
                         <CardTitle className="text-sm font-medium text-slate-400">إجمالي الكورسات</CardTitle>
                         <div className="p-2 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
@@ -61,8 +125,8 @@ export default async function DashboardPage() {
                     </CardContent>
                 </Card>
 
-                <Card className="bg-white/[0.02] border-white/5 text-white overflow-hidden relative">
-                    <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-transparent pointer-events-none" />
+                <Card className="bg-white/2 border-white/5 text-white overflow-hidden relative">
+                    <div className="absolute inset-0 bg-linear-to-br from-blue-500/10 to-transparent pointer-events-none" />
                     <CardHeader className="flex flex-row items-center justify-between pb-2 relative z-10">
                         <CardTitle className="text-sm font-medium text-slate-400">إجمالي الطلاب</CardTitle>
                         <div className="p-2 bg-blue-500/10 border border-blue-500/20 rounded-xl">
@@ -74,8 +138,8 @@ export default async function DashboardPage() {
                     </CardContent>
                 </Card>
 
-                <Card className="bg-white/[0.02] border-white/5 text-white overflow-hidden relative">
-                    <div className="absolute inset-0 bg-gradient-to-br from-yellow-500/10 to-transparent pointer-events-none" />
+                <Card className="bg-white/2 border-white/5 text-white overflow-hidden relative">
+                    <div className="absolute inset-0 bg-linear-to-br from-yellow-500/10 to-transparent pointer-events-none" />
                     <CardHeader className="flex flex-row items-center justify-between pb-2 relative z-10">
                         <CardTitle className="text-sm font-medium text-slate-400">الأرباح التقديرية</CardTitle>
                         <div className="p-2 bg-yellow-500/10 border border-yellow-500/20 rounded-xl">
@@ -90,8 +154,24 @@ export default async function DashboardPage() {
                 </Card>
             </div>
 
+            {/* الرسم البياني */}
+            <Card className="bg-white/2 border-white/5 shadow-sm rounded-3xl animate-fade-up delay-100">
+                <CardHeader>
+                    <CardTitle className="text-white flex items-center gap-2">
+                        <TrendingUp className="w-5 h-5 text-emerald-400" />
+                        إحصائيات الأرباح (آخر 6 شهور)
+                    </CardTitle>
+                    <CardDescription className="text-slate-400">
+                        نظرة سريعة على أرباحك الشهرية بناءً على اشتراكات الطلاب.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <DashboardChart data={chartData} />
+                </CardContent>
+            </Card>
+
             {/* قائمة الكورسات */}
-            <div className="flex justify-between items-center border-t border-white/5 pt-8 animate-fade-up delay-100">
+            <div className="flex justify-between items-center border-t border-white/5 pt-8 animate-fade-up delay-200">
                 <div>
                     <h2 className="text-2xl font-bold text-white">كورساتي</h2>
                 </div>
@@ -103,7 +183,7 @@ export default async function DashboardPage() {
             </div>
 
             {(!courses || courses.length === 0) ? (
-                <Card className="border-white/5 bg-white/[0.02] backdrop-blur-sm animate-fade-in">
+                <Card className="border-white/5 bg-white/2 backdrop-blur-sm animate-fade-in">
                     <CardHeader className="text-center py-12">
                         <CardTitle className="text-2xl text-white">لا توجد كورسات بعد</CardTitle>
                         <CardDescription className="text-slate-400 mt-2">ابدأ بإنشاء أول كورس لك واضف له الدروس.</CardDescription>
@@ -120,8 +200,8 @@ export default async function DashboardPage() {
                         <Link
                             href={`/dashboard/courses/${course.id}`}
                             key={course.id}
-                            className="group block bg-white/[0.02] rounded-3xl overflow-hidden border border-white/5 hover:border-emerald-500/50 transition-all duration-300 hover:shadow-[0_10px_40px_-10px_rgba(16,185,129,0.2)] hover:-translate-y-1 animate-fade-up"
-                            style={{ animationDelay: `${(index + 2) * 100}ms` }}
+                            className="group block bg-white/2 rounded-3xl overflow-hidden border border-white/5 hover:border-emerald-500/50 transition-all duration-300 hover:shadow-[0_10px_40px_-10px_rgba(16,185,129,0.2)] hover:-translate-y-1 animate-fade-up"
+                            style={{ animationDelay: `${(index + 3) * 100}ms` }}
                         >
                             <div className="relative h-40 w-full bg-slate-800 border-b border-white/5 overflow-hidden">
                                 {course.thumbnail_url ? (
@@ -129,9 +209,8 @@ export default async function DashboardPage() {
                                 ) : (
                                     <div className="flex items-center justify-center w-full h-full text-slate-500 text-xs">لا توجد صورة</div>
                                 )}
-                                <div className="absolute inset-0 bg-gradient-to-t from-[#0B0F17] to-transparent opacity-80" />
+                                <div className="absolute inset-0 bg-linear-to-t from-[#0B0F17] to-transparent opacity-80" />
 
-                                {/* Badge الحالة */}
                                 <div className="absolute top-3 right-3 z-10">
                   <span className={`text-xs px-3 py-1 rounded-full font-bold backdrop-blur-md border ${course.is_published ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' : 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30'}`}>
                     {course.is_published ? 'منشور' : 'مسودة'}

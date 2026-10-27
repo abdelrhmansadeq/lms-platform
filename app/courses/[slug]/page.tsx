@@ -10,6 +10,7 @@ import { EnrollForm } from './enroll-form'
 import { ReviewForm } from './review-form'
 import { StarRating } from '@/components/star-rating'
 import { CheckCircle2, Lock, PlayCircle, UserCircle2, FileQuestion, ArrowLeft, BookOpen, Clock } from 'lucide-react'
+import { ChatWidget } from '@/components/chat-widget'
 
 // دالة الـ SEO الديناميكي
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
@@ -310,6 +311,16 @@ export default async function CourseDetailsPage({ params }: { params: Promise<{ 
                     </div>
                 </div>
             </div>
+
+            {/* زرار الشات مع المدرس */}
+            {user && user.id !== course.instructor_id && (
+                <ChatWidget
+                    currentUserId={user.id}
+                    otherUserId={course.instructor_id}
+                    otherUserName={course.profiles?.full_name || 'المدرس'}
+                />
+            )}
+
         </div>
     )
 }
