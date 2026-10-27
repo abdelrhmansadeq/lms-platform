@@ -10,7 +10,7 @@ function extractYouTubeId(url: string) {
     return (match && match[2].length === 11) ? match[2] : url.trim();
 }
 
-// 1. إضافة درس
+// 1. إضافة درس (مع إرسال إشعارات للطلاب)
 export async function addLessonAction(_prevState: { error?: string; success?: string } | null, formData: FormData) {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
@@ -26,12 +26,14 @@ export async function addLessonAction(_prevState: { error?: string; success?: st
 
     const youtube_id = extractYouTubeId(youtubeUrlOrId)
 
-    const { data: course } = await supabase.from('courses').select('instructor_id').eq('id', courseId).single()
+    // التأكد من الصلاحية
+    const { data: course } = await supabase.from('courses').select('instructor_id, title, slug').eq('id', courseId).single()
     if (course?.instructor_id !== user.id) return { error: 'غير مصرح لك بإضافة دروس لهذا الكورس' }
 
     const { count } = await supabase.from('lessons').select('*', { count: 'exact', head: true }).eq('course_id', courseId)
     const position = (count || 0) + 1
 
+    // 1. إضافة الدرس
     const { error } = await supabase.from('lessons').insert({
         course_id: courseId,
         title,
@@ -42,8 +44,33 @@ export async function addLessonAction(_prevState: { error?: string; success?: st
 
     if (error) return { error: error.message }
 
+    // 2. إرسال إشعارات للطلاب المشتركين
+    // بنجيب كل الطلاب اللي مشتركين في الكورس ده
+    const { data: enrollments } = await supabase
+        .from('enrollments')
+        .select('student_id')
+        .eq('course_id', courseId)
+
+    if (enrollments && enrollments.length > 0) {
+        // بنجيب اسم المدرس عشان يظهر في الإشعار
+        const { data: instructorProfile } = await supabase.from('profiles').select('full_name').eq('id', user.id).single()
+        const instructorName = instructorProfile?.full_name || 'المدرس'
+
+        // بنجهز إشعار لكل طالب
+        const notificationsToInsert = enrollments.map((enrollment) => ({
+            user_id: enrollment.student_id,
+            title: 'درس جديد متاح! 🎓',
+            message: `أضاف ${instructorName} درساً جديداً بعنوان "${title}" في كورس ${course.title}`,
+            link: `/courses/${course.slug}` // يوديه لصفحة الكورس عشان يلاقي الدرس
+        }))
+
+        // بنحفظ الإشعارات كلها مرة واحدة
+        await supabase.from('notifications').insert(notificationsToInsert)
+    }
+    // -------------------------------
+
     revalidatePath(`/dashboard/courses/${courseId}`)
-    return { success: 'تم إضافة الدرس بنجاح' }
+    return { success: 'تم إضافة الدرس وإرسال الإشعارات بنجاح' }
 }
 
 // 2. نشر / إلغاء نشر الكورس
@@ -156,7 +183,7 @@ export async function addAttachmentAction(_prevState: { error?: string; success?
 
     const lessonId = formData.get('lessonId') as string
     const courseId = formData.get('courseId') as string
-    const title = formData.get('title') as string // <--- استقبال العنوان
+    const title = formData.get('title') as string
     const file = formData.get('file') as File | null
 
     if (!title || title.trim().length < 2) return { error: 'يرجى كتابة اسم للمرفق (حرفين على الأقل)' }
@@ -177,10 +204,9 @@ export async function addAttachmentAction(_prevState: { error?: string; success?
 
     const { data: urlData } = supabase.storage.from('lesson-files').getPublicUrl(fileName)
 
-    // حفظ المرفق مع العنوان في الداتابيز
     const { error: dbError } = await supabase.from('lesson_attachments').insert({
         lesson_id: lessonId,
-        title: title.trim(), // <--- حفظنا العنوان
+        title: title.trim(),
         file_name: file.name,
         file_url: urlData.publicUrl,
         file_type: file.type
