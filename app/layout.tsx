@@ -3,7 +3,8 @@ import { Inter, IBM_Plex_Sans_Arabic } from 'next/font/google'
 import './globals.css'
 import { Navbar } from '@/components/navbar'
 import { MobileHeader } from '@/components/mobile-header'
-import { WhatsAppButton } from '@/components/whatsapp-button' // <--- ضفنا ده
+import { WhatsAppButton } from '@/components/whatsapp-button'
+import { Footer } from '@/components/footer' // <--- ضفنا ده
 import { Toaster } from 'sonner'
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter', display: 'swap' })
@@ -31,11 +32,13 @@ export default function RootLayout({
         <MobileHeader />
         <Navbar />
 
-        <main className="flex-1 pb-20 md:pb-0">
+        <main className="flex-1">
             {children}
         </main>
 
-        {/* زرار الواتساب العائم */}
+        {/* الفوتر الجديد */}
+        <Footer />
+
         <WhatsAppButton />
 
         <Toaster position="top-center" richColors />
