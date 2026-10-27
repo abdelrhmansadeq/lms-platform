@@ -19,6 +19,7 @@ import { useRouter } from 'next/navigation'
 
 type Attachment = {
     id: string;
+    title: string | null;
     file_name: string;
     file_url: string;
     file_type: string;
@@ -43,7 +44,6 @@ export function AttachmentManager({
     useEffect(() => {
         if (state?.success) {
             toast.success(state.success)
-            // عشان الفورم يتفضى بعد الرفع
             const form = document.getElementById(`upload-form-${lessonId}`) as HTMLFormElement
             if (form) form.reset()
             router.refresh()
@@ -91,27 +91,37 @@ export function AttachmentManager({
                 </DialogHeader>
 
                 <div className="space-y-6 pt-4">
-                    {/* فورم رفع ملف جديد */}
-                    <form id={`upload-form-${lessonId}`} action={formAction} className="space-y-3 p-4 bg-muted/30 rounded-xl border border-border">
+                    <form id={`upload-form-${lessonId}`} action={formAction} className="space-y-4 p-4 bg-muted/30 rounded-xl border border-border">
                         <input type="hidden" name="lessonId" value={lessonId} />
                         <input type="hidden" name="courseId" value={courseId} />
 
-                        <Label>رفع ملف جديد (PDF، صورة، ZIP...)</Label>
-                        <div className="flex flex-col sm:flex-row gap-2">
+                        {/* خانة اسم المرفق الجديدة */}
+                        <div className="space-y-2">
+                            <Label>اسم المرفق</Label>
+                            <Input
+                                type="text"
+                                name="title"
+                                placeholder="مثال: سلايدات المحاضرة، كود التطبيق..."
+                                required
+                                className="bg-background"
+                            />
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label>اختر الملف (PDF، صورة، ZIP...)</Label>
                             <Input
                                 type="file"
                                 name="file"
                                 required
                                 className="cursor-pointer file:bg-primary/10 file:text-primary file:border-0 file:rounded-md file:px-4 file:py-2 file:mr-4 hover:file:bg-primary/20 transition-all bg-background"
                             />
-                            <Button type="submit" disabled={isPending} className="shrink-0">
-                                {isPending ? 'جاري الرفع...' : 'رفع'}
-                            </Button>
                         </div>
-                        <p className="text-[10px] text-muted-foreground">الحد الأقصى لحجم الملف: 10 ميجابايت.</p>
+
+                        <Button type="submit" disabled={isPending} className="w-full">
+                            {isPending ? 'جاري الرفع...' : 'رفع المرفق'}
+                        </Button>
                     </form>
 
-                    {/* قائمة الملفات الحالية */}
                     <div className="space-y-3">
                         <h4 className="font-semibold text-sm">الملفات المرفقة ({initialAttachments.length})</h4>
                         {initialAttachments.length === 0 ? (
@@ -120,9 +130,16 @@ export function AttachmentManager({
                             <div className="max-h-[250px] overflow-y-auto space-y-2 pr-1">
                                 {initialAttachments.map((file) => (
                                     <div key={file.id} className="flex items-center justify-between p-3 border border-border rounded-lg bg-card">
-                                        <div className="flex items-center gap-3 overflow-hidden">
-                                            {getFileIcon(file.file_type)}
-                                            <span className="text-sm font-medium truncate" title={file.file_name}>{file.file_name}</span>
+                                        <div className="flex flex-col gap-1 overflow-hidden">
+                                            <div className="flex items-center gap-2">
+                                                {getFileIcon(file.file_type)}
+                                                <span className="text-sm font-bold truncate" title={file.title || file.file_name}>
+                          {file.title || file.file_name}
+                        </span>
+                                            </div>
+                                            <span className="text-[10px] text-muted-foreground truncate max-w-[200px]" dir="ltr">
+                        {file.file_name}
+                      </span>
                                         </div>
                                         <div className="flex items-center gap-1 shrink-0">
                                             <a href={file.file_url} target="_blank" rel="noopener noreferrer" download>

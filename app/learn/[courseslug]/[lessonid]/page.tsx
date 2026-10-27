@@ -42,7 +42,6 @@ export default async function LessonPlayerPage({
 
     if (!lesson) notFound()
 
-    // جلب تقدم الطالب
     const { data: progress } = await supabase
         .from('lesson_progress')
         .select('watched_seconds, is_completed')
@@ -50,14 +49,12 @@ export default async function LessonPlayerPage({
         .eq('lesson_id', lesson.id)
         .single()
 
-    // جلب مرفقات الدرس
     const { data: attachments } = await supabase
         .from('lesson_attachments')
         .select('*')
         .eq('lesson_id', lesson.id)
         .order('created_at', { ascending: true })
 
-    // دالة مساعدة عشان نختار أيقونة حسب نوع الملف
     const getFileIcon = (type: string) => {
         if (type.includes('image')) return <ImageIcon className="w-5 h-5 text-blue-500" />
         if (type.includes('pdf')) return <FileText className="w-5 h-5 text-red-500" />
@@ -78,7 +75,6 @@ export default async function LessonPlayerPage({
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <div className="lg:col-span-2 space-y-6">
-                    {/* مشغل الفيديو */}
                     <VideoPlayer
                         youtubeId={lesson.youtube_id}
                         lessonId={lesson.id}
@@ -105,7 +101,7 @@ export default async function LessonPlayerPage({
                             {lesson.content || 'لا يوجد محتوى نصي مرفق مع هذا الدرس.'}
                         </div>
 
-                        {/* قسم المرفقات (لو موجودة) */}
+                        {/* عرض المرفقات بالاسم الجديد */}
                         {attachments && attachments.length > 0 && (
                             <div className="mt-8 pt-6 border-t border-border">
                                 <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
@@ -113,7 +109,7 @@ export default async function LessonPlayerPage({
                                     مرفقات الدرس
                                 </h3>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                    {attachments.map((file) => (
+                                    {attachments.map((file: any) => (
                                         <a
                                             key={file.id}
                                             href={file.file_url}
@@ -124,9 +120,14 @@ export default async function LessonPlayerPage({
                                         >
                                             <div className="flex items-center gap-3 overflow-hidden">
                                                 {getFileIcon(file.file_type)}
-                                                <span className="text-sm font-medium truncate" title={file.file_name}>
-                          {file.file_name}
-                        </span>
+                                                <div className="flex flex-col truncate">
+                          <span className="text-sm font-semibold truncate" title={file.title || file.file_name}>
+                            {file.title || file.file_name}
+                          </span>
+                                                    <span className="text-[10px] text-muted-foreground truncate max-w-[150px]" dir="ltr">
+                            {file.file_name}
+                          </span>
+                                                </div>
                                             </div>
                                             <Download className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors shrink-0" />
                                         </a>

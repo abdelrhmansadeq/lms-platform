@@ -134,9 +134,7 @@ export async function updateLessonAction(_prevState: { error?: string; success?:
 
     if (!title || !youtubeUrlOrId) return { error: 'العنوان ورابط اليوتيوب مطلوبان' }
 
-    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
-    const match = youtubeUrlOrId.match(regExp);
-    const youtube_id = (match && match[2].length === 11) ? match[2] : youtubeUrlOrId.trim();
+    const youtube_id = extractYouTubeId(youtubeUrlOrId);
 
     const { error } = await supabase
         .from('lessons')
@@ -150,7 +148,7 @@ export async function updateLessonAction(_prevState: { error?: string; success?:
     return { success: 'تم تعديل الدرس بنجاح' }
 }
 
-// 7. إضافة مرفق لدرس (جديد)
+// 7. إضافة مرفق لدرس (مع عنوان)
 export async function addAttachmentAction(_prevState: { error?: string; success?: string } | null, formData: FormData) {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
@@ -158,16 +156,16 @@ export async function addAttachmentAction(_prevState: { error?: string; success?
 
     const lessonId = formData.get('lessonId') as string
     const courseId = formData.get('courseId') as string
+    const title = formData.get('title') as string // <--- استقبال العنوان
     const file = formData.get('file') as File | null
 
+    if (!title || title.trim().length < 2) return { error: 'يرجى كتابة اسم للمرفق (حرفين على الأقل)' }
     if (!file || file.size === 0) return { error: 'يرجى اختيار ملف أولاً' }
     if (file.size > 10 * 1024 * 1024) return { error: 'حجم الملف يجب أن يكون أقل من 10 ميجابايت' }
 
-    // التأكد من الصلاحية
     const { data: course } = await supabase.from('courses').select('instructor_id').eq('id', courseId).single()
     if (course?.instructor_id !== user.id) return { error: 'غير مصرح لك' }
 
-    // رفع الملف
     const fileExt = file.name.split('.').pop()
     const fileName = `${user.id}-${Date.now()}.${fileExt}`
 
@@ -179,9 +177,10 @@ export async function addAttachmentAction(_prevState: { error?: string; success?
 
     const { data: urlData } = supabase.storage.from('lesson-files').getPublicUrl(fileName)
 
-    // حفظ المرفق في الداتابيز
+    // حفظ المرفق مع العنوان في الداتابيز
     const { error: dbError } = await supabase.from('lesson_attachments').insert({
         lesson_id: lessonId,
+        title: title.trim(), // <--- حفظنا العنوان
         file_name: file.name,
         file_url: urlData.publicUrl,
         file_type: file.type
