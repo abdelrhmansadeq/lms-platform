@@ -3,15 +3,29 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { logoutAction } from '@/actions/auth'
 import { BottomNav } from './bottom-nav'
+import { NotificationsBell } from './notifications-bell'
 
 export async function Navbar() {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
 
     let profile = null
+    let notifications = []
+
     if (user) {
+        // جلب البروفايل
         const { data } = await supabase.from('profiles').select('full_name, role').eq('id', user.id).single()
         profile = data
+
+        // جلب أحدث 10 إشعارات
+        const { data: notifs } = await supabase
+            .from('notifications')
+            .select('*')
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: false })
+            .limit(10)
+
+        notifications = notifs || []
     }
 
     return (
@@ -30,7 +44,6 @@ export async function Navbar() {
                                     كورساتي
                                 </Link>
 
-                                {/* لينك المنتدى */}
                                 <Link href="/forum" className="hover:text-primary transition-colors">
                                     المنتدى
                                 </Link>
@@ -51,7 +64,10 @@ export async function Navbar() {
                     <div className="flex items-center gap-4">
                         {user ? (
                             <>
-                                <div className="text-sm text-left hidden sm:block">
+                                {/* جرس الإشعارات */}
+                                <NotificationsBell initialNotifications={notifications} />
+
+                                <div className="text-sm text-left hidden sm:block border-r border-border pr-4">
                                     <p className="font-semibold">{profile?.full_name || user.email}</p>
                                     <p className="text-xs text-muted-foreground">
                                         {profile?.role === 'instructor' ? 'مدرس' : 'طالب'}

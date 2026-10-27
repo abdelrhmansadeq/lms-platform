@@ -24,7 +24,6 @@ export async function createPostAction(_prevState: { error?: string; success?: s
 
     let imageUrl = null
 
-    // لو فيه صورة مرفقة
     if (imageFile && imageFile.size > 0) {
         const fileExt = imageFile.name.split('.').pop()
         const fileName = `${user.id}-${Date.now()}.${fileExt}`
@@ -41,7 +40,6 @@ export async function createPostAction(_prevState: { error?: string; success?: s
         imageUrl = urlData.publicUrl
     }
 
-    // إضافة الموضوع في الداتابيز
     const { error } = await supabase.from('forum_posts').insert({
         author_id: user.id,
         title: title.trim(),
@@ -55,7 +53,7 @@ export async function createPostAction(_prevState: { error?: string; success?: s
     redirect('/forum')
 }
 
-// 2. دالة الرد على موضوع
+// 2. دالة الرد على موضوع (مع إرسال إشعار)
 export async function createReplyAction(_prevState: { error?: string; success?: string } | null, formData: FormData) {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
@@ -69,6 +67,7 @@ export async function createReplyAction(_prevState: { error?: string; success?: 
         return { error: 'الرد لا يمكن أن يكون فارغاً' }
     }
 
+    // إضافة الرد
     const { error } = await supabase.from('forum_replies').insert({
         post_id: postId,
         author_id: user.id,
@@ -76,6 +75,32 @@ export async function createReplyAction(_prevState: { error?: string; success?: 
     })
 
     if (error) return { error: 'حدث خطأ أثناء إضافة الرد' }
+
+    // --- منطق الإشعارات ---
+    // 1. نجيب بيانات صاحب الموضوع
+    const { data: post } = await supabase
+        .from('forum_posts')
+        .select('author_id, title')
+        .eq('id', postId)
+        .single()
+
+    // 2. نجيب اسم الشخص اللي بيرد
+    const { data: profile } = await supabase
+        .from('profiles')
+        .select('full_name')
+        .eq('id', user.id)
+        .single()
+
+    // 3. لو صاحب الموضوع موجود، ومش هو نفسه اللي بيرد، ابعتله إشعار
+    if (post && post.author_id !== user.id) {
+        await supabase.from('notifications').insert({
+            user_id: post.author_id,
+            title: 'رد جديد على موضوعك',
+            message: `${profile?.full_name || 'أحد الطلاب'} رد على موضوعك: "${post.title}"`,
+            link: `/forum/${postId}`
+        })
+    }
+    // ---------------------
 
     revalidatePath(`/forum/${postId}`)
     return { success: 'تم إضافة ردك بنجاح' }
