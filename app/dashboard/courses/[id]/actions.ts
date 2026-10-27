@@ -3,13 +3,14 @@
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 
-// دالة مساعدة لاستخراج ID فيديو اليوتيوب من الرابط
+// دالة مساعدة لاستخراج ID فيديو اليوتيوب
 function extractYouTubeId(url: string) {
     const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
     const match = url.match(regExp);
-    return (match && match[2].length === 11) ? match[2] : url.trim(); // لو المستخدم حط الـ ID مباشرة
+    return (match && match[2].length === 11) ? match[2] : url.trim();
 }
 
+// 1. إضافة درس
 export async function addLessonAction(_prevState: { error?: string; success?: string } | null, formData: FormData) {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
@@ -21,20 +22,13 @@ export async function addLessonAction(_prevState: { error?: string; success?: st
     const content = formData.get('content') as string
     const youtubeUrlOrId = formData.get('youtube_id') as string
 
-    if (!title || !youtubeUrlOrId) {
-        return { error: 'العنوان ورابط اليوتيوب مطلوبان' }
-    }
+    if (!title || !youtubeUrlOrId) return { error: 'العنوان ورابط اليوتيوب مطلوبان' }
 
-    // استخراج الـ ID
     const youtube_id = extractYouTubeId(youtubeUrlOrId)
 
-    // التأكد إن الكورس ده تابع للمدرس الحالي (حماية إضافية فوق الـ RLS)
     const { data: course } = await supabase.from('courses').select('instructor_id').eq('id', courseId).single()
-    if (course?.instructor_id !== user.id) {
-        return { error: 'غير مصرح لك بإضافة دروس لهذا الكورس' }
-    }
+    if (course?.instructor_id !== user.id) return { error: 'غير مصرح لك بإضافة دروس لهذا الكورس' }
 
-    // تحديد ترتيب الدرس (آخر درس + 1)
     const { count } = await supabase.from('lessons').select('*', { count: 'exact', head: true }).eq('course_id', courseId)
     const position = (count || 0) + 1
 
@@ -52,6 +46,7 @@ export async function addLessonAction(_prevState: { error?: string; success?: st
     return { success: 'تم إضافة الدرس بنجاح' }
 }
 
+// 2. نشر / إلغاء نشر الكورس
 export async function togglePublishAction(courseId: string, currentState: boolean) {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
@@ -61,7 +56,7 @@ export async function togglePublishAction(courseId: string, currentState: boolea
         .from('courses')
         .update({ is_published: !currentState })
         .eq('id', courseId)
-        .eq('instructor_id', user.id) // حماية إضافية
+        .eq('instructor_id', user.id)
 
     if (error) return { error: error.message }
 
@@ -70,47 +65,12 @@ export async function togglePublishAction(courseId: string, currentState: boolea
     return { success: 'تم تحديث حالة الكورس' }
 }
 
-// دالة توليد كود تفعيل جديد
-export async function generateActivationCodeAction(courseId: string) {
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-
-    if (!user) return { error: 'غير مصرح' }
-
-    // التأكد إن الكورس بتاع المدرس ده
-    const { data: course } = await supabase.from('courses').select('instructor_id').eq('id', courseId).single()
-    if (course?.instructor_id !== user.id) {
-        return { error: 'غير مصرح لك بتوليد أكواد لهذا الكورس' }
-    }
-
-    // توليد كود عشوائي آمن (مثال: ACT-A1B2C3)
-    // بنستخدم الدالة العشوائية ونحولها لأرقام وحروف إنجليزية
-    const randomString = Math.random().toString(36).substring(2, 8).toUpperCase()
-    const newCode = `ACT-${randomString}`
-
-    // حفظ الكود في قاعدة البيانات
-    const { error } = await supabase.from('activation_codes').insert({
-        code: newCode,
-        course_id: courseId,
-    })
-
-    if (error) {
-        // لو الكود اتكرر بالصدفة (احتمال ضعيف جدًا)
-        return { error: 'حدث خطأ أثناء توليد الكود، حاول مرة أخرى' }
-    }
-
-    // تحديث الصفحة عشان الكود الجديد يظهر
-    revalidatePath(`/dashboard/courses/${courseId}`)
-    return { success: 'تم توليد الكود بنجاح' }
-}
-
-// دالة حذف درس
+// 3. حذف درس
 export async function deleteLessonAction(lessonId: string, courseId: string) {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return { error: 'غير مصرح' }
 
-    // الحماية (RLS هيمنع برضه، بس دي حماية إضافية)
     const { data: course } = await supabase.from('courses').select('instructor_id').eq('id', courseId).single()
     if (course?.instructor_id !== user.id) return { error: 'غير مصرح لك' }
 
@@ -122,7 +82,7 @@ export async function deleteLessonAction(lessonId: string, courseId: string) {
     return { success: 'تم حذف الدرس بنجاح' }
 }
 
-// دالة حذف كورس كامل
+// 4. حذف كورس
 export async function deleteCourseAction(courseId: string) {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
@@ -136,11 +96,34 @@ export async function deleteCourseAction(courseId: string) {
     return { success: 'تم حذف الكورس بنجاح' }
 }
 
-// دالة تعديل الدرس
-export async function updateLessonAction(_prevState: { error?: string; success?: string } | null, formData: FormData) {
+// 5. توليد كود تفعيل
+export async function generateActivationCodeAction(courseId: string) {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
 
+    if (!user) return { error: 'غير مصرح' }
+
+    const { data: course } = await supabase.from('courses').select('instructor_id').eq('id', courseId).single()
+    if (course?.instructor_id !== user.id) return { error: 'غير مصرح لك بتوليد أكواد لهذا الكورس' }
+
+    const randomString = Math.random().toString(36).substring(2, 8).toUpperCase()
+    const newCode = `ACT-${randomString}`
+
+    const { error } = await supabase.from('activation_codes').insert({
+        code: newCode,
+        course_id: courseId,
+    })
+
+    if (error) return { error: 'حدث خطأ أثناء توليد الكود، حاول مرة أخرى' }
+
+    revalidatePath(`/dashboard/courses/${courseId}`)
+    return { success: 'تم توليد الكود بنجاح' }
+}
+
+// 6. تعديل درس
+export async function updateLessonAction(_prevState: { error?: string; success?: string } | null, formData: FormData) {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
     if (!user) return { error: 'غير مصرح' }
 
     const lessonId = formData.get('lessonId') as string
@@ -149,23 +132,15 @@ export async function updateLessonAction(_prevState: { error?: string; success?:
     const content = formData.get('content') as string
     const youtubeUrlOrId = formData.get('youtube_id') as string
 
-    if (!title || !youtubeUrlOrId) {
-        return { error: 'العنوان ورابط اليوتيوب مطلوبان' }
-    }
+    if (!title || !youtubeUrlOrId) return { error: 'العنوان ورابط اليوتيوب مطلوبان' }
 
-    // استخراج الـ ID (نفس الدالة اللي فوق، لو معملها export اعملها)
-    // هنستخدم نفس الـ Regex هنا للتأكد
     const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
     const match = youtubeUrlOrId.match(regExp);
     const youtube_id = (match && match[2].length === 11) ? match[2] : youtubeUrlOrId.trim();
 
     const { error } = await supabase
         .from('lessons')
-        .update({
-            title,
-            content,
-            youtube_id
-        })
+        .update({ title, content, youtube_id })
         .eq('id', lessonId)
         .eq('course_id', courseId)
 
@@ -173,4 +148,64 @@ export async function updateLessonAction(_prevState: { error?: string; success?:
 
     revalidatePath(`/dashboard/courses/${courseId}`)
     return { success: 'تم تعديل الدرس بنجاح' }
+}
+
+// 7. إضافة مرفق لدرس (جديد)
+export async function addAttachmentAction(_prevState: { error?: string; success?: string } | null, formData: FormData) {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { error: 'غير مصرح' }
+
+    const lessonId = formData.get('lessonId') as string
+    const courseId = formData.get('courseId') as string
+    const file = formData.get('file') as File | null
+
+    if (!file || file.size === 0) return { error: 'يرجى اختيار ملف أولاً' }
+    if (file.size > 10 * 1024 * 1024) return { error: 'حجم الملف يجب أن يكون أقل من 10 ميجابايت' }
+
+    // التأكد من الصلاحية
+    const { data: course } = await supabase.from('courses').select('instructor_id').eq('id', courseId).single()
+    if (course?.instructor_id !== user.id) return { error: 'غير مصرح لك' }
+
+    // رفع الملف
+    const fileExt = file.name.split('.').pop()
+    const fileName = `${user.id}-${Date.now()}.${fileExt}`
+
+    const { error: uploadError } = await supabase.storage
+        .from('lesson-files')
+        .upload(fileName, file)
+
+    if (uploadError) return { error: 'حدث خطأ أثناء رفع الملف' }
+
+    const { data: urlData } = supabase.storage.from('lesson-files').getPublicUrl(fileName)
+
+    // حفظ المرفق في الداتابيز
+    const { error: dbError } = await supabase.from('lesson_attachments').insert({
+        lesson_id: lessonId,
+        file_name: file.name,
+        file_url: urlData.publicUrl,
+        file_type: file.type
+    })
+
+    if (dbError) return { error: 'حدث خطأ أثناء حفظ بيانات الملف' }
+
+    revalidatePath(`/dashboard/courses/${courseId}`)
+    return { success: 'تم إضافة المرفق بنجاح' }
+}
+
+// 8. حذف مرفق
+export async function deleteAttachmentAction(attachmentId: string, courseId: string) {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { error: 'غير مصرح' }
+
+    const { data: course } = await supabase.from('courses').select('instructor_id').eq('id', courseId).single()
+    if (course?.instructor_id !== user.id) return { error: 'غير مصرح لك' }
+
+    const { error } = await supabase.from('lesson_attachments').delete().eq('id', attachmentId)
+
+    if (error) return { error: 'حدث خطأ أثناء حذف المرفق' }
+
+    revalidatePath(`/dashboard/courses/${courseId}`)
+    return { success: 'تم حذف المرفق بنجاح' }
 }

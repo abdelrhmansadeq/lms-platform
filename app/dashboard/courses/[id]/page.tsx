@@ -7,6 +7,8 @@ import { AddLessonForm } from './add-lesson-form'
 import { PublishButton } from './publish-button'
 import { ActivationCodes } from './activation-codes'
 import { DeleteLessonButton, DeleteCourseButton } from './delete-buttons'
+import { AttachmentManager } from './attachment-manager'
+import { EditLessonDialog } from './edit-lesson-dialog'
 
 export default async function CourseManagePage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = await params;
@@ -15,7 +17,6 @@ export default async function CourseManagePage({ params }: { params: Promise<{ i
 
     if (!user) redirect('/login')
 
-    // جلب الكورس
     const { data: course } = await supabase
         .from('courses')
         .select('*')
@@ -25,14 +26,24 @@ export default async function CourseManagePage({ params }: { params: Promise<{ i
 
     if (!course) notFound()
 
-    // جلب الدروس
     const { data: lessons } = await supabase
         .from('lessons')
         .select('*')
         .eq('course_id', course.id)
         .order('position', { ascending: true })
 
-    // جلب أكواد التفعيل
+    // جلب المرفقات لكل دروس الكورس ده
+    let allAttachments: any[] = []
+    if (lessons && lessons.length > 0) {
+        const lessonIds = lessons.map(l => l.id)
+        const { data: attachments } = await supabase
+            .from('lesson_attachments')
+            .select('*')
+            .in('lesson_id', lessonIds)
+
+        if (attachments) allAttachments = attachments
+    }
+
     const { data: activationCodes } = await supabase
         .from('activation_codes')
         .select('*')
@@ -51,12 +62,9 @@ export default async function CourseManagePage({ params }: { params: Promise<{ i
           <span className={`text-sm px-3 py-1 rounded-full ${course.is_published ? 'bg-emerald-500/10 text-emerald-500' : 'bg-yellow-500/10 text-yellow-500'}`}>
             {course.is_published ? 'منشور للطلاب' : 'مسودة'}
           </span>
-
-                    {/* زرار التعديل */}
                     <Link href={`/dashboard/courses/${course.id}/edit`}>
                         <Button variant="outline" size="sm">تعديل الكورس</Button>
                     </Link>
-
                     <PublishButton courseId={course.id} isPublished={course.is_published} />
                     <DeleteCourseButton courseId={course.id} />
                 </div>
@@ -70,30 +78,41 @@ export default async function CourseManagePage({ params }: { params: Promise<{ i
                         <p className="text-muted-foreground text-sm">لم تقم بإضافة أي دروس لهذا الكورس بعد.</p>
                     ) : (
                         <div className="space-y-3">
-                            {lessons?.map((lesson) => (
-                                <div key={lesson.id} className="flex items-center justify-between p-4 border border-border rounded-xl bg-card hover:bg-muted/30 transition-colors">
-                                    <div className="flex items-center gap-3">
-                    <span className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary font-bold text-sm">
-                      {lesson.position}
-                    </span>
-                                        <div>
-                                            <p className="font-medium">{lesson.title}</p>
-                                            <p className="text-xs text-muted-foreground" dir="ltr">ID: {lesson.youtube_id}</p>
+                            {lessons?.map((lesson) => {
+                                // فلترة المرفقات الخاصة بالدرس ده بس
+                                const lessonAttachments = allAttachments.filter(a => a.lesson_id === lesson.id)
+
+                                return (
+                                    <div key={lesson.id} className="flex items-center justify-between p-4 border border-border rounded-xl bg-card hover:bg-muted/30 transition-colors">
+                                        <div className="flex items-center gap-3">
+                      <span className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary font-bold text-sm shrink-0">
+                        {lesson.position}
+                      </span>
+                                            <div>
+                                                <p className="font-medium line-clamp-1">{lesson.title}</p>
+                                                <p className="text-xs text-muted-foreground" dir="ltr">ID: {lesson.youtube_id}</p>
+                                            </div>
+                                        </div>
+                                        {/* أزرار التعديل والحذف والمرفقات */}
+                                        <div className="flex items-center gap-1">
+                                            <AttachmentManager
+                                                lessonId={lesson.id}
+                                                courseId={course.id}
+                                                lessonTitle={lesson.title}
+                                                initialAttachments={lessonAttachments}
+                                            />
+                                            <EditLessonDialog lesson={lesson} courseId={course.id} />
+                                            <DeleteLessonButton lessonId={lesson.id} courseId={course.id} />
                                         </div>
                                     </div>
-                                    {/* أزرار التعديل والحذف */}
-                                    <div className="flex items-center gap-2">
-                                        <DeleteLessonButton lessonId={lesson.id} courseId={course.id} />
-                                    </div>
-                                </div>
-                            ))}
+                                )
+                            })}
                         </div>
                     )}
                 </div>
 
                 {/* العمود الجانبي */}
                 <div className="space-y-6">
-                    {/* كارت إضافة درس */}
                     <Card className="bg-card">
                         <CardHeader>
                             <CardTitle>إضافة درس جديد</CardTitle>
@@ -104,7 +123,6 @@ export default async function CourseManagePage({ params }: { params: Promise<{ i
                         </CardContent>
                     </Card>
 
-                    {/* كارت الاختبارات الجديد */}
                     <Card className="bg-card">
                         <CardHeader>
                             <CardTitle>الاختبارات</CardTitle>
@@ -117,7 +135,6 @@ export default async function CourseManagePage({ params }: { params: Promise<{ i
                         </CardContent>
                     </Card>
 
-                    {/* كارت أكواد التفعيل */}
                     <Card className="bg-card">
                         <CardHeader>
                             <CardTitle>إدارة الاشتراكات</CardTitle>

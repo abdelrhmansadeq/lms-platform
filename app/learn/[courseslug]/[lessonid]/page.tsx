@@ -2,8 +2,8 @@ import { createClient } from '@/lib/supabase/server'
 import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
-import { ArrowRight, PlayCircle, CheckCircle2 } from 'lucide-react'
-import { VideoPlayer } from './video-player' // هنعمل المكون ده تحت
+import { ArrowRight, PlayCircle, CheckCircle2, Paperclip, Download, FileText, Image as ImageIcon, File } from 'lucide-react'
+import { VideoPlayer } from './video-player'
 
 export default async function LessonPlayerPage({
                                                    params
@@ -42,13 +42,27 @@ export default async function LessonPlayerPage({
 
     if (!lesson) notFound()
 
-    // جلب التقدم الحالي للطالب في الدرس ده
+    // جلب تقدم الطالب
     const { data: progress } = await supabase
         .from('lesson_progress')
         .select('watched_seconds, is_completed')
         .eq('student_id', user.id)
         .eq('lesson_id', lesson.id)
         .single()
+
+    // جلب مرفقات الدرس
+    const { data: attachments } = await supabase
+        .from('lesson_attachments')
+        .select('*')
+        .eq('lesson_id', lesson.id)
+        .order('created_at', { ascending: true })
+
+    // دالة مساعدة عشان نختار أيقونة حسب نوع الملف
+    const getFileIcon = (type: string) => {
+        if (type.includes('image')) return <ImageIcon className="w-5 h-5 text-blue-500" />
+        if (type.includes('pdf')) return <FileText className="w-5 h-5 text-red-500" />
+        return <File className="w-5 h-5 text-emerald-500" />
+    }
 
     return (
         <div className="container mx-auto px-4 md:px-6 lg:px-8 py-8 max-w-5xl">
@@ -64,7 +78,7 @@ export default async function LessonPlayerPage({
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <div className="lg:col-span-2 space-y-6">
-                    {/* مشغل الفيديو التفاعلي */}
+                    {/* مشغل الفيديو */}
                     <VideoPlayer
                         youtubeId={lesson.youtube_id}
                         lessonId={lesson.id}
@@ -79,15 +93,47 @@ export default async function LessonPlayerPage({
               </span>
                             {lesson.title}
                         </h2>
+
                         {progress?.is_completed && (
                             <div className="flex items-center gap-2 text-emerald-500 text-sm font-medium mb-4 bg-emerald-500/10 p-2 rounded w-fit">
                                 <CheckCircle2 className="w-4 h-4" />
                                 لقد أكملت هذا الدرس
                             </div>
                         )}
+
                         <div className="prose dark:prose-invert max-w-none mt-4 text-muted-foreground whitespace-pre-wrap leading-relaxed">
                             {lesson.content || 'لا يوجد محتوى نصي مرفق مع هذا الدرس.'}
                         </div>
+
+                        {/* قسم المرفقات (لو موجودة) */}
+                        {attachments && attachments.length > 0 && (
+                            <div className="mt-8 pt-6 border-t border-border">
+                                <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
+                                    <Paperclip className="w-5 h-5 text-primary" />
+                                    مرفقات الدرس
+                                </h3>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    {attachments.map((file) => (
+                                        <a
+                                            key={file.id}
+                                            href={file.file_url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            download
+                                            className="flex items-center justify-between p-3 bg-muted/30 hover:bg-muted/60 border border-border rounded-xl transition-colors group"
+                                        >
+                                            <div className="flex items-center gap-3 overflow-hidden">
+                                                {getFileIcon(file.file_type)}
+                                                <span className="text-sm font-medium truncate" title={file.file_name}>
+                          {file.file_name}
+                        </span>
+                                            </div>
+                                            <Download className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors shrink-0" />
+                                        </a>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
 
