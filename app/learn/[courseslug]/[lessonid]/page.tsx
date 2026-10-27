@@ -21,7 +21,6 @@ type CommentWithProfile = {
     content: string;
     created_at: string;
     user_id: string;
-    // ضفنا avatar_url هنا
     profiles: { full_name: string | null; avatar_url: string | null; } | null;
 }
 
@@ -87,7 +86,6 @@ export default async function LessonPlayerPage({
 
     const attachments = (attachmentsData as unknown as AttachmentData[]) || []
 
-    // جلب التعليقات مع أسماء وأصور أصحابها
     const { data: commentsData } = await supabase
         .from('lesson_comments')
         .select(`
@@ -147,9 +145,11 @@ export default async function LessonPlayerPage({
                             </div>
                         )}
 
-                        <div className="prose dark:prose-invert max-w-none mt-4 text-slate-400 whitespace-pre-wrap leading-relaxed">
-                            {lesson.content || 'لا يوجد محتوى نصي مرفق مع هذا الدرس.'}
-                        </div>
+                        {/* عرض المحتوى المنسق (HTML) */}
+                        <div
+                            className="prose dark:prose-invert max-w-none mt-4 text-slate-400 leading-relaxed"
+                            dangerouslySetInnerHTML={{ __html: lesson.content || 'لا يوجد محتوى نصي مرفق مع هذا الدرس.' }}
+                        />
 
                         {/* المرفقات */}
                         {attachments.length > 0 && (

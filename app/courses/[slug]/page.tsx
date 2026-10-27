@@ -11,7 +11,7 @@ import { ReviewForm } from './review-form'
 import { StarRating } from '@/components/star-rating'
 import { CheckCircle2, Lock, PlayCircle, UserCircle2, FileQuestion, ArrowLeft, BookOpen, Clock } from 'lucide-react'
 
-// --- دالة الـ SEO الديناميكي ---
+// دالة الـ SEO الديناميكي
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
     const { slug } = await params
     const supabase = await createClient()
@@ -26,17 +26,19 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
         return { title: 'الكورس غير موجود | منصة LMS' }
     }
 
+    // بنشيل أي تاجات HTML من الوصف عشان يظهر كلام نضيف في جوجل
+    const cleanDescription = course.description?.replace(/<[^>]*>?/gm, '').substring(0, 160) || 'اكتشف هذا الكورس الرائع على منصة LMS.'
+
     return {
         title: `${course.title} | منصة LMS`,
-        description: course.description || 'اكتشف هذا الكورس الرائع على منصة LMS.',
+        description: cleanDescription,
         openGraph: {
             title: course.title,
-            description: course.description || 'اكتشف هذا الكورس الرائع على منصة LMS.',
+            description: cleanDescription,
             images: course.thumbnail_url ? [course.thumbnail_url] : [],
         },
     }
 }
-// ------------------------------
 
 type ReviewWithProfile = {
     id: string;
@@ -44,7 +46,7 @@ type ReviewWithProfile = {
     comment: string | null;
     created_at: string;
     student_id: string;
-    profiles: { full_name: string | null; } | null;
+    profiles: { full_name: string | null; avatar_url: string | null; } | null;
 };
 
 type QuizData = { id: string; title: string; };
@@ -90,7 +92,7 @@ export default async function CourseDetailsPage({ params }: { params: Promise<{ 
 
     const { data: reviews } = await supabase
         .from('reviews')
-        .select(`id, rating, comment, created_at, student_id, profiles (full_name)`)
+        .select(`id, rating, comment, created_at, student_id, profiles (full_name, avatar_url)`)
         .eq('course_id', course.id)
         .order('created_at', { ascending: false })
 
@@ -148,7 +150,11 @@ export default async function CourseDetailsPage({ params }: { params: Promise<{ 
                             <StarRating initialRating={Number(avgRating)} readonly size="md" />
                             <span className="text-sm text-slate-400 font-medium">({reviewsCount} تقييم)</span>
                         </div>
-                        <p className="text-slate-400 text-lg whitespace-pre-wrap leading-relaxed">{course.description}</p>
+                        {/* عرض الوصف المنسق (HTML) */}
+                        <div
+                            className="prose dark:prose-invert max-w-none text-slate-400 text-lg leading-relaxed"
+                            dangerouslySetInnerHTML={{ __html: course.description || '' }}
+                        />
                     </div>
 
                     {/* محتوى الكورس */}
@@ -237,9 +243,13 @@ export default async function CourseDetailsPage({ params }: { params: Promise<{ 
                                     <div key={review.id} className="p-5 bg-white/[0.02] border border-white/5 rounded-2xl shadow-sm">
                                         <div className="flex justify-between items-start mb-3">
                                             <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-400 font-bold border border-emerald-500/20">
-                                                    {review.profiles?.full_name?.charAt(0) || 'ط'}
-                                                </div>
+                                                {review.profiles?.avatar_url ? (
+                                                    <img src={review.profiles.avatar_url} alt="Avatar" className="w-10 h-10 rounded-full object-cover border border-white/10" />
+                                                ) : (
+                                                    <div className="w-10 h-10 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-400 font-bold border border-emerald-500/20">
+                                                        {review.profiles?.full_name?.charAt(0) || 'ط'}
+                                                    </div>
+                                                )}
                                                 <div>
                                                     <p className="font-bold text-sm text-slate-200">{review.profiles?.full_name || 'طالب'}</p>
                                                     <p className="text-[10px] text-slate-500">{new Date(review.created_at).toLocaleDateString('ar-EG')}</p>
@@ -293,7 +303,6 @@ export default async function CourseDetailsPage({ params }: { params: Promise<{ 
 
                                 <div className="pt-4 space-y-3 text-sm text-slate-400">
                                     <p className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-500"/> وصول كامل مدى الحياة</p>
-                                    <p className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-500"/> شهادة إتمام (قريباً)</p>
                                     <p className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-500"/> دعم فني ومجتمع تفاعلي</p>
                                 </div>
                             </CardContent>

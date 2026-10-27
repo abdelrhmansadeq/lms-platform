@@ -1,21 +1,23 @@
 'use client'
 
-import { useActionState, useEffect, useRef } from 'react'
+import { useActionState, useEffect, useRef, useState } from 'react'
 import { addLessonAction } from './actions'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
 import { toast } from 'sonner'
+import { RichTextEditor } from '@/components/rich-text-editor'
 
 export function AddLessonForm({ courseId }: { courseId: string }) {
     const [state, formAction, isPending] = useActionState(addLessonAction, null)
     const formRef = useRef<HTMLFormElement>(null)
+    const [content, setContent] = useState('')
 
     useEffect(() => {
         if (state?.success) {
             toast.success(state.success)
             formRef.current?.reset()
+            setContent('') // تفريغ المحرر بعد الإضافة
         } else if (state?.error) {
             toast.error(state.error)
         }
@@ -26,22 +28,25 @@ export function AddLessonForm({ courseId }: { courseId: string }) {
             <input type="hidden" name="courseId" value={courseId} />
 
             <div className="space-y-2">
-                <Label htmlFor="title">عنوان الدرس</Label>
-                <Input id="title" name="title" placeholder="مثال: مقدمة في Next.js" required />
+                <Label className="text-slate-300">عنوان الدرس</Label>
+                <Input id="title" name="title" placeholder="مثال: مقدمة في Next.js" required className="bg-black/20 border-white/10 focus-visible:ring-emerald-500 text-white" />
             </div>
 
             <div className="space-y-2">
-                <Label htmlFor="youtube_id">رابط اليوتيوب أو الـ ID</Label>
-                <Input id="youtube_id" name="youtube_id" placeholder="https://youtu.be/..." dir="ltr" className="text-left" required />
-                <p className="text-[10px] text-muted-foreground">يقبل الرابط الكامل أو الـ ID فقط.</p>
+                <Label className="text-slate-300">رابط اليوتيوب أو الـ ID</Label>
+                <Input id="youtube_id" name="youtube_id" placeholder="https://youtu.be/..." dir="ltr" className="text-left bg-black/20 border-white/10 focus-visible:ring-emerald-500 text-white" required />
             </div>
 
             <div className="space-y-2">
-                <Label htmlFor="content">ملاحظات أو محتوى (اختياري)</Label>
-                <Textarea id="content" name="content" placeholder="نص الدرس أو روابط مساعدة..." />
+                <Label className="text-slate-300">ملاحظات أو محتوى (اختياري)</Label>
+                {/* استبدلنا الـ Textarea بالمحرر */}
+                <RichTextEditor
+                    content={content}
+                    onChange={(html) => setContent(html)}
+                />
             </div>
 
-            <Button type="submit" className="w-full" disabled={isPending}>
+            <Button type="submit" className="w-full bg-emerald-500 hover:bg-emerald-400 text-black font-bold" disabled={isPending}>
                 {isPending ? 'جاري الإضافة...' : 'إضافة الدرس'}
             </Button>
         </form>
