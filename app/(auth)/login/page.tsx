@@ -1,6 +1,9 @@
 'use client'
 
-import { useActionState } from 'react'
+import { useActionState, useEffect } from 'react'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import * as z from 'zod'
 import { loginAction } from './actions'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -8,14 +11,39 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import Link from 'next/link'
 import { LogIn } from 'lucide-react'
+import { toast } from 'sonner'
+
+// 1. تعريف قواعد التحقق
+const loginSchema = z.object({
+    email: z.string().email('يرجى إدخال بريد إلكتروني صحيح'),
+    password: z.string().min(1, 'كلمة المرور مطلوبة'),
+})
+
+type LoginFormValues = z.infer<typeof loginSchema>
 
 export default function LoginPage() {
+    // 2. إعداد الفورم
+    const { register, handleSubmit, formState: { errors } } = useForm<LoginFormValues>({
+        resolver: zodResolver(loginSchema),
+    })
+
     const [state, formAction, isPending] = useActionState(loginAction, null)
+
+    useEffect(() => {
+        if (state?.error) toast.error(state.error)
+    }, [state])
+
+    // 3. الإرسال للسيرفر
+    const onSubmit = (data: LoginFormValues) => {
+        const formData = new FormData()
+        formData.append('email', data.email)
+        formData.append('password', data.password)
+        formAction(formData)
+    }
 
     return (
         <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center p-4 relative overflow-hidden">
 
-            {/* 🌟 Glow Background */}
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[400px] bg-emerald-500/20 blur-[120px] rounded-full pointer-events-none -z-10" />
 
             <Card className="w-full max-w-md bg-white/5 backdrop-blur-xl border-white/10 shadow-2xl rounded-3xl animate-fade-up">
@@ -30,31 +58,31 @@ export default function LoginPage() {
                 </CardHeader>
 
                 <CardContent>
-                    <form action={formAction} className="space-y-5">
+                    <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
 
                         <div className="space-y-2">
                             <Label htmlFor="email" className="text-slate-300">البريد الإلكتروني</Label>
                             <Input
                                 id="email"
-                                name="email"
+                                {...register('email')}
                                 type="email"
                                 placeholder="you@example.com"
                                 dir="ltr"
-                                className="text-left bg-black/20 border-white/10 focus-visible:ring-emerald-500 text-white placeholder:text-slate-500 h-11"
-                                required
+                                className={`text-left bg-black/20 border-white/10 focus-visible:ring-emerald-500 text-white placeholder:text-slate-500 h-11 ${errors.email ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
                             />
+                            {errors.email && <p className="text-red-400 text-xs font-medium">{errors.email.message}</p>}
                         </div>
 
                         <div className="space-y-2">
                             <Label htmlFor="password" className="text-slate-300">كلمة المرور</Label>
                             <Input
                                 id="password"
-                                name="password"
+                                {...register('password')}
                                 type="password"
                                 dir="ltr"
-                                className="text-left bg-black/20 border-white/10 focus-visible:ring-emerald-500 text-white h-11"
-                                required
+                                className={`text-left bg-black/20 border-white/10 focus-visible:ring-emerald-500 text-white h-11 ${errors.password ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
                             />
+                            {errors.password && <p className="text-red-400 text-xs font-medium">{errors.password.message}</p>}
                         </div>
 
                         {state?.error && (
