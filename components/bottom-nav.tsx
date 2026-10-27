@@ -2,19 +2,18 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, BookOpen, User, LayoutDashboard } from 'lucide-react'
+import { Home, BookOpen, User, LayoutDashboard, MessagesSquare } from 'lucide-react'
 
 export function BottomNav({ role }: { role?: string }) {
     const pathname = usePathname()
 
-    // بناء قائمة الروابط
     const links = [
         { href: '/', label: 'الرئيسية', icon: Home },
+        { href: '/forum', label: 'المنتدى', icon: MessagesSquare }, // ضفنا المنتدى هنا
         { href: '/my-courses', label: 'كورساتي', icon: BookOpen },
         { href: '/profile', label: 'حسابي', icon: User },
     ]
 
-    // لو المستخدم مدرس، نضيف لوحة التحكم
     if (role === 'instructor') {
         links.push({ href: '/dashboard', label: 'التحكم', icon: LayoutDashboard })
     }
@@ -24,7 +23,6 @@ export function BottomNav({ role }: { role?: string }) {
             <nav className="flex justify-around items-center h-16 px-2">
                 {links.map((link) => {
                     const Icon = link.icon
-                    // هل إحنا واقفين على الصفحة دي؟
                     const isActive = pathname === link.href || pathname.startsWith(`${link.href}/`)
 
                     return (

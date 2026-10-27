@@ -16,7 +16,6 @@ export async function Navbar() {
 
     return (
         <>
-            {/* الـ Navbar العلوي: مخفي في الموبايل (hidden md:block) */}
             <nav className="hidden md:block border-b bg-background/80 backdrop-blur-md shadow-sm sticky top-0 z-50">
                 <div className="container mx-auto flex h-16 items-center justify-between px-4 md:px-6 lg:px-8">
 
@@ -29,6 +28,11 @@ export async function Navbar() {
                             <div className="hidden md:flex items-center gap-4 text-sm font-medium">
                                 <Link href="/my-courses" className="hover:text-primary transition-colors">
                                     كورساتي
+                                </Link>
+
+                                {/* لينك المنتدى */}
+                                <Link href="/forum" className="hover:text-primary transition-colors">
+                                    المنتدى
                                 </Link>
 
                                 {profile?.role === 'instructor' && (
@@ -73,7 +77,6 @@ export async function Navbar() {
                 </div>
             </nav>
 
-            {/* الشريط السفلي للموبايل */}
             <BottomNav role={profile?.role} />
         </>
     )
