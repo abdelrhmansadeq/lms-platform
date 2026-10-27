@@ -26,14 +26,12 @@ export async function addLessonAction(_prevState: { error?: string; success?: st
 
     const youtube_id = extractYouTubeId(youtubeUrlOrId)
 
-    // التأكد من الصلاحية
     const { data: course } = await supabase.from('courses').select('instructor_id, title, slug').eq('id', courseId).single()
     if (course?.instructor_id !== user.id) return { error: 'غير مصرح لك بإضافة دروس لهذا الكورس' }
 
     const { count } = await supabase.from('lessons').select('*', { count: 'exact', head: true }).eq('course_id', courseId)
     const position = (count || 0) + 1
 
-    // 1. إضافة الدرس
     const { error } = await supabase.from('lessons').insert({
         course_id: courseId,
         title,
@@ -44,30 +42,25 @@ export async function addLessonAction(_prevState: { error?: string; success?: st
 
     if (error) return { error: error.message }
 
-    // 2. إرسال إشعارات للطلاب المشتركين
-    // بنجيب كل الطلاب اللي مشتركين في الكورس ده
+    // إرسال إشعارات للطلاب المشتركين
     const { data: enrollments } = await supabase
         .from('enrollments')
         .select('student_id')
         .eq('course_id', courseId)
 
     if (enrollments && enrollments.length > 0) {
-        // بنجيب اسم المدرس عشان يظهر في الإشعار
         const { data: instructorProfile } = await supabase.from('profiles').select('full_name').eq('id', user.id).single()
         const instructorName = instructorProfile?.full_name || 'المدرس'
 
-        // بنجهز إشعار لكل طالب
         const notificationsToInsert = enrollments.map((enrollment) => ({
             user_id: enrollment.student_id,
             title: 'درس جديد متاح! 🎓',
             message: `أضاف ${instructorName} درساً جديداً بعنوان "${title}" في كورس ${course.title}`,
-            link: `/courses/${course.slug}` // يوديه لصفحة الكورس عشان يلاقي الدرس
+            link: `/courses/${course.slug}`
         }))
 
-        // بنحفظ الإشعارات كلها مرة واحدة
         await supabase.from('notifications').insert(notificationsToInsert)
     }
-    // -------------------------------
 
     revalidatePath(`/dashboard/courses/${courseId}`)
     return { success: 'تم إضافة الدرس وإرسال الإشعارات بنجاح' }
@@ -218,14 +211,28 @@ export async function addAttachmentAction(_prevState: { error?: string; success?
     return { success: 'تم إضافة المرفق بنجاح' }
 }
 
-// 8. حذف مرفق
+// 8. حذف مرفق (مع سد ثغرة الأمان IDOR)
 export async function deleteAttachmentAction(attachmentId: string, courseId: string) {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return { error: 'غير مصرح' }
 
+    // التأكد إن الكورس بتاع المدرس
     const { data: course } = await supabase.from('courses').select('instructor_id').eq('id', courseId).single()
     if (course?.instructor_id !== user.id) return { error: 'غير مصرح لك' }
+
+    // التأكد إن المرفق ده تابع لدرس في الكورس ده
+    const { data: attachment } = await supabase
+        .from('lesson_attachments')
+        .select('lesson_id, lessons(course_id)')
+        .eq('id', attachmentId)
+        .single()
+
+    // استخراج course_id من العلاقة بأمان بدون استخدام any
+    const lessonData = attachment?.lessons as unknown as { course_id: string } | { course_id: string }[] | null;
+    const lessonCourseId = Array.isArray(lessonData) ? lessonData[0]?.course_id : lessonData?.course_id;
+
+    if (lessonCourseId !== courseId) return { error: 'هذا المرفق لا ينتمي لهذا الكورس' }
 
     const { error } = await supabase.from('lesson_attachments').delete().eq('id', attachmentId)
 
