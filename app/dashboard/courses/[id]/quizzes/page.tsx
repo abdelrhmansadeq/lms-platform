@@ -2,8 +2,8 @@ import { createClient } from '@/lib/supabase/server'
 import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
-import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { ArrowRight, Plus, FileQuestion } from 'lucide-react'
+import { Card, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card'
+import { ArrowRight, Plus, FileQuestion, BarChart3 } from 'lucide-react'
 
 export default async function QuizzesPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = await params
@@ -17,7 +17,7 @@ export default async function QuizzesPage({ params }: { params: Promise<{ id: st
 
     const { data: quizzes } = await supabase
         .from('quizzes')
-        .select('id, title, created_at, questions(id)')
+        .select('id, title, created_at, questions(id), quiz_attempts(id)')
         .eq('course_id', id)
         .order('created_at', { ascending: false })
 
@@ -48,14 +48,22 @@ export default async function QuizzesPage({ params }: { params: Promise<{ id: st
                 </div>
             ) : (
                 <div className="grid gap-4 md:grid-cols-2">
-                    {quizzes.map((quiz) => (
-                        <Card key={quiz.id} className="bg-card">
+                    {quizzes.map((quiz: any) => (
+                        <Card key={quiz.id} className="bg-card flex flex-col justify-between">
                             <CardHeader>
                                 <CardTitle>{quiz.title}</CardTitle>
-                                <CardDescription>
-                                    عدد الأسئلة: {(quiz.questions as any)?.length || 0}
+                                <CardDescription className="flex gap-4 mt-2">
+                                    <span>الأسئلة: {quiz.questions?.length || 0}</span>
+                                    <span>المشاركات: {quiz.quiz_attempts?.length || 0}</span>
                                 </CardDescription>
                             </CardHeader>
+                            <CardFooter className="pt-4 border-t border-border">
+                                <Link href={`/dashboard/courses/${id}/quizzes/${quiz.id}/results`} className="w-full">
+                                    <Button variant="outline" className="w-full gap-2">
+                                        <BarChart3 className="w-4 h-4" /> عرض نتائج الطلاب
+                                    </Button>
+                                </Link>
+                            </CardFooter>
                         </Card>
                     ))}
                 </div>

@@ -18,25 +18,35 @@
 
 @layer base {
   :root {
-    --background: 240 5% 6%;
-    --foreground: 0 0% 98%;
-    --card: 240 5% 9%;
-    --card-foreground: 0 0% 98%;
-    --popover: 240 5% 9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 160 84% 39%; /* لون أخضر زمردي */
-    --primary-foreground: 0 0% 100%; /* لون النص جوه الزرار هيبقى أبيض */
-    --secondary: 240 4% 16%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 240 4% 16%;
-    --muted-foreground: 240 5% 65%;
-    --accent: 240 4% 16%;
-    --accent-foreground: 0 0% 98%;
+    /* الدارك مود الفخم جداً (Vercel Vibe) */
+    --background: 220 27% 6%; /* #0B0F17 */
+    --foreground: 210 20% 98%;
+
+    --card: 220 27% 9%;
+    --card-foreground: 210 20% 98%;
+
+    --popover: 220 27% 9%;
+    --popover-foreground: 210 20% 98%;
+
+    --primary: 160 84% 39%; /* Emerald 500 */
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 220 20% 15%;
+    --secondary-foreground: 210 20% 98%;
+
+    --muted: 220 20% 15%;
+    --muted-foreground: 210 20% 65%;
+
+    --accent: 220 20% 15%;
+    --accent-foreground: 210 20% 98%;
+
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 98%;
-    --border: 240 4% 16%;
-    --input: 240 4% 16%;
+
+    --border: 220 20% 15%;
+    --input: 220 20% 15%;
     --ring: 160 84% 39%;
+
     --radius: 0.75rem;
   }
 }
@@ -46,7 +56,6 @@
     border-color: hsl(var(--border));
   }
 
-  /* منع السكرول الأفقي */
   html, body {
     margin: 0;
     padding: 0;
@@ -61,30 +70,21 @@
     color: hsl(var(--foreground));
     font-feature-settings: "rlig" 1, "calt" 1;
     line-height: 1.6;
-    transition: background-color 0.3s ease, color 0.3s ease;
   }
 
-  /* لون التحديد (Selection) */
   ::selection {
-    background-color: hsl(var(--primary));
+    background-color: rgba(16, 185, 129, 0.3); /* Emerald selection */
     color: white;
   }
 
-  /* Custom Scrollbar */
   ::-webkit-scrollbar { width: 8px; }
   ::-webkit-scrollbar-track { background: hsl(var(--background)); }
   ::-webkit-scrollbar-thumb { background: hsl(var(--primary)); border-radius: 4px; }
-  ::-webkit-scrollbar-thumb:hover { background: hsl(var(--primary) / 0.8); }
 }
 
-/* ✅ تحسينات الموبايل لمنع الزووم في الآيفون وتسهيل اللمس */
 @media (max-width: 768px) {
-  input, textarea, select {
-    font-size: 16px !important;
-  }
-  button, a {
-    min-height: 44px;
-  }
+  input, textarea, select { font-size: 16px !important; }
+  button, a { min-height: 44px; }
 }
 
 .delay-100 { animation-delay: 100ms; }
