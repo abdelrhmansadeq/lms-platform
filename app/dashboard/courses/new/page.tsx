@@ -12,6 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { RichTextEditor } from '@/components/rich-text-editor'
 import Link from 'next/link'
 import { toast } from 'sonner'
+import { createClient } from '@/lib/supabase/client'
 
 // 1. تعريف قواعد التحقق
 const courseSchema = z.object({
@@ -19,6 +20,7 @@ const courseSchema = z.object({
     price: z.string().refine((val) => !isNaN(Number(val)) && Number(val) >= 0, {
         message: 'السعر يجب أن يكون رقماً موجباً',
     }),
+    category_id: z.string().optional(),
 })
 
 type CourseFormValues = z.infer<typeof courseSchema>
@@ -28,7 +30,19 @@ export default function NewCoursePage() {
     const [description, setDescription] = useState('')
     const [thumbnailFile, setThumbnailFile] = useState<File | null>(null)
 
-    // 2. إعداد React Hook Form
+    // حالة التصنيفات
+    const [categories, setCategories] = useState<{id: string, name: string}[]>([])
+    const supabase = createClient()
+
+    // جلب التصنيفات من الداتابيز
+    useEffect(() => {
+        const fetchCategories = async () => {
+            const { data } = await supabase.from('categories').select('id, name')
+            if (data) setCategories(data)
+        }
+        fetchCategories()
+    }, [supabase])
+
     const { register, handleSubmit, formState: { errors } } = useForm<CourseFormValues>({
         resolver: zodResolver(courseSchema),
         defaultValues: { price: '0' }
@@ -38,14 +52,13 @@ export default function NewCoursePage() {
         if (state?.error) toast.error(state.error)
     }, [state])
 
-    // 3. دالة الإرسال بعد التحقق
     const onSubmit = (data: CourseFormValues) => {
         const formData = new FormData()
         formData.append('title', data.title)
         formData.append('price', data.price)
-        formData.append('description', description) // جاية من المحرر
+        formData.append('category_id', data.category_id || '')
+        formData.append('description', description)
 
-        // لو فيه صورة مرفوعة بنبعتها
         if (thumbnailFile) {
             formData.append('thumbnail_file', thumbnailFile)
         }
@@ -62,7 +75,6 @@ export default function NewCoursePage() {
                 </CardHeader>
 
                 <CardContent>
-                    {/* بنستخدم handleSubmit عشان نمنع الإرسال لو فيه أخطاء */}
                     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
 
                         <div className="space-y-2">
@@ -74,6 +86,23 @@ export default function NewCoursePage() {
                                 className={`bg-black/20 border-white/10 text-white ${errors.title ? 'border-red-500' : ''}`}
                             />
                             {errors.title && <p className="text-red-400 text-xs font-medium">{errors.title.message}</p>}
+                        </div>
+
+                        {/* قائمة اختيار التصنيف */}
+                        <div className="space-y-2">
+                            <Label htmlFor="category_id" className="text-slate-300">تصنيف الكورس</Label>
+                            <select
+                                id="category_id"
+                                {...register('category_id')}
+                                className="flex h-11 w-full rounded-md border border-white/10 bg-black/20 px-3 py-2 text-sm text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+                            >
+                                <option value="" className="bg-[#0B0F17] text-slate-400">بدون تصنيف</option>
+                                {categories.map(cat => (
+                                    <option key={cat.id} value={cat.id} className="bg-[#0B0F17] text-white">
+                                        {cat.name}
+                                    </option>
+                                ))}
+                            </select>
                         </div>
 
                         <div className="space-y-2">

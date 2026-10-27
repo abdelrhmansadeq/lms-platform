@@ -15,6 +15,7 @@ export async function createCourseAction(_prevState: { error?: string; success?:
     const title = formData.get('title') as string
     const description = formData.get('description') as string
     const price = Number(formData.get('price')) || 0
+    const categoryId = formData.get('category_id') as string // ضفنا التصنيف
     const thumbnailFile = formData.get('thumbnail_file') as File | null
 
     if (!title || title.trim().length < 3) {
@@ -23,10 +24,9 @@ export async function createCourseAction(_prevState: { error?: string; success?:
 
     let thumbnailUrl = null
 
-    // لو المدرس اختار صورة، هنرفعها
     if (thumbnailFile && thumbnailFile.size > 0) {
         const fileExt = thumbnailFile.name.split('.').pop()
-        const fileName = `${user.id}-${Date.now()}.${fileExt}` // اسم فريد للصورة
+        const fileName = `${user.id}-${Date.now()}.${fileExt}`
 
         const { error: uploadError } = await supabase.storage
             .from('thumbnails')
@@ -36,7 +36,6 @@ export async function createCourseAction(_prevState: { error?: string; success?:
             return { error: 'حدث خطأ أثناء رفع الصورة. تأكد من أن حجمها معقول.' }
         }
 
-        // جلب الرابط العام للصورة
         const { data: urlData } = supabase.storage.from('thumbnails').getPublicUrl(fileName)
         thumbnailUrl = urlData.publicUrl
     }
@@ -53,6 +52,7 @@ export async function createCourseAction(_prevState: { error?: string; success?:
         slug: slug,
         is_published: false,
         thumbnail_url: thumbnailUrl,
+        category_id: categoryId || null // حفظنا التصنيف
     })
 
     if (error) {

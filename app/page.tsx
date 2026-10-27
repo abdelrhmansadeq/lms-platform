@@ -9,14 +9,15 @@ import { WishlistButton } from '@/components/wishlist-button'
 export default async function Home({
                                        searchParams
                                    }: {
-    searchParams: Promise<{ q?: string, page?: string }>
+    searchParams: Promise<{ q?: string, page?: string, category?: string }>
 }) {
     const supabase = await createClient()
-    const { q, page } = await searchParams
+    const { q, page, category } = await searchParams
 
     const searchQuery = q?.trim() || ''
+    const categorySlug = category || ''
     const currentPage = Number(page) || 1
-    const itemsPerPage = 6 // عدد الكورسات في كل صفحة
+    const itemsPerPage = 6
     const offset = (currentPage - 1) * itemsPerPage
 
     const { data: { user } } = await supabase.auth.getUser()
@@ -33,7 +34,17 @@ export default async function Home({
         }
     }
 
-    // بناء الاستعلام مع حساب العدد الإجمالي
+    // 1. جلب التصنيفات لعرضها كأزرار
+    const { data: categories } = await supabase.from('categories').select('id, name, slug')
+
+    // 2. لو الطالب اختار تصنيف، هندور على الـ ID بتاعه
+    let categoryId = null
+    if (categorySlug) {
+        const { data: catData } = await supabase.from('categories').select('id').eq('slug', categorySlug).single()
+        if (catData) categoryId = catData.id
+    }
+
+    // 3. بناء استعلام الكورسات مع الفلترة
     let query = supabase
         .from('courses')
         .select('*', { count: 'exact' })
@@ -43,7 +54,10 @@ export default async function Home({
         query = query.ilike('title', `%${searchQuery}%`)
     }
 
-    // تطبيق الـ Pagination (بناخد 6 كورسات بس)
+    if (categoryId) {
+        query = query.eq('category_id', categoryId)
+    }
+
     const { data: courses, count } = await query
         .order('created_at', { ascending: false })
         .range(offset, offset + itemsPerPage - 1)
@@ -59,7 +73,7 @@ export default async function Home({
 
             <div className="container mx-auto px-4 md:px-6 lg:px-8 py-20">
 
-                <div className="text-center mb-20 max-w-3xl mx-auto animate-fade-up">
+                <div className="text-center mb-16 max-w-3xl mx-auto animate-fade-up">
                     <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-500/10 text-emerald-400 text-sm font-semibold mb-6 border border-emerald-500/20 backdrop-blur-md">
                         <Sparkles className="w-4 h-4" />
                         <span>المنصة التعليمية الأقوى</span>
@@ -85,11 +99,35 @@ export default async function Home({
                                     className="pr-12 h-12 text-lg rounded-xl bg-transparent border-0 focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-slate-500 text-white"
                                 />
                             </div>
+                            {/* لو فيه تصنيف مختار، بنبعته مع البحث عشان ميتلغي */}
+                            {categorySlug && <input type="hidden" name="category" value={categorySlug} />}
                             <Button type="submit" size="lg" className="h-12 rounded-xl px-8 bg-emerald-500 hover:bg-emerald-400 text-black font-bold transition-all shadow-[0_0_20px_-5px_rgba(16,185,129,0.6)]">
                                 بحث
                             </Button>
                         </form>
                     </div>
+                </div>
+
+                {/* أزرار التصنيفات */}
+                <div className="flex overflow-x-auto gap-3 pb-6 mb-6 scrollbar-hide animate-fade-up delay-100">
+                    <Link href={`/?${searchQuery ? `q=${searchQuery}` : ''}`}>
+                        <Button
+                            variant="outline"
+                            className={`rounded-full px-6 transition-all ${!categorySlug ? 'bg-emerald-500 text-black border-emerald-500 font-bold' : 'bg-white/5 border-white/10 text-slate-300 hover:bg-white/10 hover:text-white'}`}
+                        >
+                            الكل
+                        </Button>
+                    </Link>
+                    {categories?.map((cat) => (
+                        <Link key={cat.id} href={`/?category=${cat.slug}${searchQuery ? `&q=${searchQuery}` : ''}`}>
+                            <Button
+                                variant="outline"
+                                className={`rounded-full px-6 whitespace-nowrap transition-all ${categorySlug === cat.slug ? 'bg-emerald-500 text-black border-emerald-500 font-bold' : 'bg-white/5 border-white/10 text-slate-300 hover:bg-white/10 hover:text-white'}`}
+                            >
+                                {cat.name}
+                            </Button>
+                        </Link>
+                    ))}
                 </div>
 
                 <div className="mb-8 flex justify-between items-end pb-4 animate-fade-up delay-200">
@@ -104,9 +142,9 @@ export default async function Home({
                         <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-6">
                             <Search className="w-10 h-10 text-slate-400" />
                         </div>
-                        <h3 className="text-2xl font-semibold mb-2 text-white">لا توجد كورسات تطابق بحثك</h3>
-                        <p className="text-slate-400 mb-8">جرب البحث بكلمات أخرى أو تصفح جميع الكورسات.</p>
-                        {searchQuery && (
+                        <h3 className="text-2xl font-semibold mb-2 text-white">لا توجد كورسات في هذا التصنيف</h3>
+                        <p className="text-slate-400 mb-8">جرب تصنيف آخر أو تصفح جميع الكورسات.</p>
+                        {(searchQuery || categorySlug) && (
                             <Link href="/">
                                 <Button variant="outline" size="lg" className="border-white/10 hover:bg-white/5 text-white">عرض كل الكورسات</Button>
                             </Link>
@@ -139,7 +177,7 @@ export default async function Home({
 
                                     <div className="p-6 flex-1 flex flex-col relative z-10">
                                         <h3 className="text-xl font-bold mb-3 line-clamp-1 text-white group-hover:text-emerald-400 transition-colors">{course.title}</h3>
-                                        <p className="text-sm text-slate-400 line-clamp-2 min-h-[40px] mb-6 flex-1">{course.description || 'لا يوجد وصف لهذا الكورس.'}</p>
+                                        <p className="text-sm text-slate-400 line-clamp-2 min-h-[40px] mb-6 flex-1">{course.description?.replace(/<[^>]*>?/gm, '') || 'لا يوجد وصف لهذا الكورس.'}</p>
 
                                         <div className="flex justify-between items-center pt-4 border-t border-white/5 mt-auto">
                                             <div className="text-xl font-bold text-white">{course.price === 0 ? 'مجاني' : `${course.price} ج.م`}</div>
@@ -150,16 +188,15 @@ export default async function Home({
                             ))}
                         </div>
 
-                        {/* أزرار الترقيم (Pagination) */}
                         {totalPages > 1 && (
                             <div className="flex justify-center items-center gap-2 mt-12 animate-fade-up">
-                                <Link href={`/?page=${currentPage - 1}${searchQuery ? `&q=${searchQuery}` : ''}`} className={currentPage === 1 ? 'pointer-events-none opacity-50' : ''}>
+                                <Link href={`/?page=${currentPage - 1}${searchQuery ? `&q=${searchQuery}` : ''}${categorySlug ? `&category=${categorySlug}` : ''}`} className={currentPage === 1 ? 'pointer-events-none opacity-50' : ''}>
                                     <Button variant="outline" size="icon" className="bg-white/5 border-white/10 hover:bg-white/10"><ChevronRight className="w-4 h-4" /></Button>
                                 </Link>
 
                                 <div className="flex gap-1">
                                     {Array.from({ length: totalPages }).map((_, i) => (
-                                        <Link key={i} href={`/?page=${i + 1}${searchQuery ? `&q=${searchQuery}` : ''}`}>
+                                        <Link key={i} href={`/?page=${i + 1}${searchQuery ? `&q=${searchQuery}` : ''}${categorySlug ? `&category=${categorySlug}` : ''}`}>
                                             <Button
                                                 variant={currentPage === i + 1 ? "default" : "outline"}
                                                 size="sm"
@@ -171,7 +208,7 @@ export default async function Home({
                                     ))}
                                 </div>
 
-                                <Link href={`/?page=${currentPage + 1}${searchQuery ? `&q=${searchQuery}` : ''}`} className={currentPage === totalPages ? 'pointer-events-none opacity-50' : ''}>
+                                <Link href={`/?page=${currentPage + 1}${searchQuery ? `&q=${searchQuery}` : ''}${categorySlug ? `&category=${categorySlug}` : ''}`} className={currentPage === totalPages ? 'pointer-events-none opacity-50' : ''}>
                                     <Button variant="outline" size="icon" className="bg-white/5 border-white/10 hover:bg-white/10"><ChevronLeft className="w-4 h-4" /></Button>
                                 </Link>
                             </div>
