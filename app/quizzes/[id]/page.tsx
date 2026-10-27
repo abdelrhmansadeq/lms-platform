@@ -1,0 +1,90 @@
+import { createClient } from '@/lib/supabase/server'
+import { notFound, redirect } from 'next/navigation'
+import { QuizClient } from './quiz-client'
+import Link from 'next/link'
+import { ArrowRight } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+
+// التعديل هنا: تعريف نوع للبيانات بدل any
+type QuizWithCourse = {
+    id: string;
+    title: string;
+    courses: {
+        id: string;
+        slug: string;
+        title: string;
+    } | null;
+};
+
+export default async function QuizPage({ params }: { params: Promise<{ id: string }> }) {
+    const { id } = await params
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) redirect('/login')
+
+    // 1. جلب بيانات الاختبار والكورس المرتبط بيه
+    const { data: quizData } = await supabase
+        .from('quizzes')
+        .select(`
+      id, title,
+      courses (id, slug, title)
+    `)
+        .eq('id', id)
+        .single()
+
+    if (!quizData) notFound()
+
+    // التعديل هنا: استخدمنا النوع اللي عرفناه فوق
+    const quiz = quizData as unknown as QuizWithCourse;
+    const course = quiz.courses;
+
+    if (!course) notFound();
+
+    // 2. التأكد إن الطالب مشترك في الكورس ده
+    const { data: enrollment } = await supabase
+        .from('enrollments')
+        .select('id')
+        .eq('student_id', user.id)
+        .eq('course_id', course.id)
+        .single()
+
+    if (!enrollment) {
+        redirect(`/courses/${course.slug}`) // لو مش مشترك يرجعه لصفحة الكورس
+    }
+
+    // 3. جلب الأسئلة (بدون الإجابات الصحيحة عشان الأمان)
+    const { data: questions } = await supabase
+        .from('questions')
+        .select('id, question_text, options')
+        .eq('quiz_id', quiz.id)
+
+    if (!questions || questions.length === 0) {
+        return (
+            <div className="container mx-auto py-20 text-center">
+                <h2 className="text-2xl font-bold mb-4">هذا الاختبار لا يحتوي على أسئلة حتى الآن.</h2>
+                <Link href={`/courses/${course.slug}`}><Button>العودة للكورس</Button></Link>
+            </div>
+        )
+    }
+
+    return (
+        <div className="container mx-auto px-4 md:px-6 lg:px-8 py-8 max-w-3xl">
+            <div className="mb-6 animate-fade-up">
+                <Link href={`/courses/${course.slug}`}>
+                    <Button variant="ghost" className="gap-2 hover:bg-muted">
+                        <ArrowRight className="w-4 h-4" />
+                        العودة للكورس
+                    </Button>
+                </Link>
+            </div>
+
+            <QuizClient
+                quizId={quiz.id}
+                quizTitle={quiz.title}
+                courseSlug={course.slug}
+                questions={questions}
+            />
+        </div>
+    )
+}

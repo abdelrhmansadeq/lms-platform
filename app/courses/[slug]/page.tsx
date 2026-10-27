@@ -8,9 +8,8 @@ import Link from 'next/link'
 import { EnrollForm } from './enroll-form'
 import { ReviewForm } from './review-form'
 import { StarRating } from '@/components/star-rating'
-import { CheckCircle2, Lock, PlayCircle, UserCircle2 } from 'lucide-react'
+import { CheckCircle2, Lock, PlayCircle, UserCircle2, FileQuestion, ArrowLeft } from 'lucide-react'
 
-// التعديل هنا: تعريف نوع للتقييم بدل any
 type ReviewWithProfile = {
     id: string;
     rating: number;
@@ -20,6 +19,11 @@ type ReviewWithProfile = {
     profiles: {
         full_name: string | null;
     } | null;
+};
+
+type QuizData = {
+    id: string;
+    title: string;
 };
 
 export default async function CourseDetailsPage({ params }: { params: Promise<{ slug: string }> }) {
@@ -48,13 +52,23 @@ export default async function CourseDetailsPage({ params }: { params: Promise<{ 
         if (enrollment) isEnrolled = true
     }
 
+    // 1. جلب الدروس
     const { data: lessons } = await supabase
         .from('lessons')
         .select('*')
         .eq('course_id', course.id)
         .order('position', { ascending: true })
 
-    // جلب التقييمات (ضفنا student_id هنا عشان نعرف تقييم الطالب الحالي)
+    // 2. جلب الاختبارات
+    const { data: quizzesData } = await supabase
+        .from('quizzes')
+        .select('id, title')
+        .eq('course_id', course.id)
+        .order('created_at', { ascending: true })
+
+    const quizzes = quizzesData as QuizData[] || []
+
+    // 3. جلب التقييمات
     const { data: reviews } = await supabase
         .from('reviews')
         .select(`
@@ -64,16 +78,15 @@ export default async function CourseDetailsPage({ params }: { params: Promise<{ 
         .eq('course_id', course.id)
         .order('created_at', { ascending: false })
 
-    // التعديل هنا: بنحول البيانات للنوع اللي عرفناه فوق
     const typedReviews = (reviews as unknown as ReviewWithProfile[]) || []
     const reviewsCount = typedReviews.length
     const avgRating = reviewsCount > 0
         ? (typedReviews.reduce((acc, curr) => acc + curr.rating, 0) / reviewsCount).toFixed(1)
         : 0
 
-    // هل الطالب ده قيّم الكورس قبل كده؟
     const myReview = user ? typedReviews.find(r => r.student_id === user.id) : null
 
+    // 4. حساب التقدم
     let completedLessonIds: string[] = []
     let courseProgress = 0
 
@@ -109,7 +122,6 @@ export default async function CourseDetailsPage({ params }: { params: Promise<{ 
                     <div>
                         <h1 className="text-3xl md:text-4xl font-bold mb-2">{course.title}</h1>
 
-                        {/* عرض متوسط التقييم */}
                         <div className="flex items-center gap-2 mb-4">
                             <span className="text-yellow-500 font-bold text-lg">{avgRating}</span>
                             <StarRating initialRating={Number(avgRating)} readonly size="sm" />
@@ -161,6 +173,30 @@ export default async function CourseDetailsPage({ params }: { params: Promise<{ 
                                     })}
                                 </div>
                             )}
+
+                            {/* قسم الاختبارات الجديد */}
+                            {isEnrolled && quizzes.length > 0 && (
+                                <div className="mt-8 pt-6 border-t border-border">
+                                    <h4 className="font-bold text-xl mb-4 flex items-center gap-2">
+                                        <FileQuestion className="w-5 h-5 text-primary" />
+                                        اختبارات الكورس
+                                    </h4>
+                                    <div className="space-y-3">
+                                        {quizzes.map((quiz) => (
+                                            <div key={quiz.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 border border-border rounded-xl bg-background hover:bg-muted/50 transition-colors gap-4">
+                                                <span className="font-medium text-lg">{quiz.title}</span>
+                                                <Link href={`/quizzes/${quiz.id}`} className="w-full sm:w-auto">
+                                                    <Button size="sm" className="w-full sm:w-auto gap-2 bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground">
+                                                        بدء الاختبار
+                                                        <ArrowLeft className="w-4 h-4" />
+                                                    </Button>
+                                                </Link>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
                         </CardContent>
                     </Card>
 
