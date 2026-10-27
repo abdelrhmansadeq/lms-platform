@@ -1,3 +1,4 @@
+import { Metadata } from 'next'
 import Image from 'next/image'
 import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
@@ -9,6 +10,33 @@ import { EnrollForm } from './enroll-form'
 import { ReviewForm } from './review-form'
 import { StarRating } from '@/components/star-rating'
 import { CheckCircle2, Lock, PlayCircle, UserCircle2, FileQuestion, ArrowLeft, BookOpen, Clock } from 'lucide-react'
+
+// --- دالة الـ SEO الديناميكي ---
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+    const { slug } = await params
+    const supabase = await createClient()
+
+    const { data: course } = await supabase
+        .from('courses')
+        .select('title, description, thumbnail_url')
+        .eq('slug', slug)
+        .single()
+
+    if (!course) {
+        return { title: 'الكورس غير موجود | منصة LMS' }
+    }
+
+    return {
+        title: `${course.title} | منصة LMS`,
+        description: course.description || 'اكتشف هذا الكورس الرائع على منصة LMS.',
+        openGraph: {
+            title: course.title,
+            description: course.description || 'اكتشف هذا الكورس الرائع على منصة LMS.',
+            images: course.thumbnail_url ? [course.thumbnail_url] : [],
+        },
+    }
+}
+// ------------------------------
 
 type ReviewWithProfile = {
     id: string;

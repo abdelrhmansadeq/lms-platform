@@ -2,19 +2,32 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { Button } from '@/components/ui/button'
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { MessageSquare, Plus, UserCircle2 } from 'lucide-react'
+import { MessageSquare, Plus, UserCircle2, ChevronRight, ChevronLeft } from 'lucide-react'
 
-export default async function ForumPage() {
+export default async function ForumPage({
+                                            searchParams
+                                        }: {
+    searchParams: Promise<{ page?: string }>
+}) {
     const supabase = await createClient()
+    const { page } = await searchParams
 
-    const { data: posts } = await supabase
+    const currentPage = Number(page) || 1
+    const itemsPerPage = 6 // عدد المواضيع في كل صفحة
+    const offset = (currentPage - 1) * itemsPerPage
+
+    // بنجيب العدد الإجمالي والمواضيع في نفس الوقت
+    const { data: posts, count } = await supabase
         .from('forum_posts')
         .select(`
       id, title, content, created_at,
       profiles (full_name),
       forum_replies (id)
-    `)
+    `, { count: 'exact' })
         .order('created_at', { ascending: false })
+        .range(offset, offset + itemsPerPage - 1)
+
+    const totalPages = count ? Math.ceil(count / itemsPerPage) : 0
 
     return (
         <div className="container mx-auto px-4 md:px-6 lg:px-8 py-12 max-w-5xl relative">
@@ -50,44 +63,73 @@ export default async function ForumPage() {
                     </Link>
                 </div>
             ) : (
-                <div className="grid gap-4">
-                    {posts.map((post, index) => (
-                        <Link href={`/forum/${post.id}`} key={post.id}>
-                            <Card
-                                className="bg-white/[0.02] border-white/5 hover:border-emerald-500/50 hover:bg-white/[0.04] transition-all duration-300 hover:shadow-[0_10px_40px_-10px_rgba(16,185,129,0.2)] hover:-translate-y-1 animate-fade-up group rounded-3xl"
-                                style={{ animationDelay: `${index * 50}ms` }}
-                            >
-                                <CardHeader className="p-6">
-                                    <div className="flex justify-between items-start gap-4">
-                                        <div className="flex-1">
-                                            <CardTitle className="text-xl text-white group-hover:text-emerald-400 transition-colors line-clamp-1">
-                                                {post.title}
-                                            </CardTitle>
-                                            <CardDescription className="line-clamp-2 mt-2 text-slate-400">
-                                                {post.content}
-                                            </CardDescription>
-                                        </div>
-                                    </div>
-
-                                    <div className="flex items-center justify-between mt-6 pt-4 border-t border-white/5">
-                                        <div className="flex items-center gap-2 text-sm text-slate-400">
-                                            <UserCircle2 className="w-5 h-5" />
-                                            <span className="font-medium text-slate-300">
-                        {(post.profiles as any)?.full_name || 'طالب'}
-                      </span>
-                                            <span className="text-xs hidden sm:inline-block">• {new Date(post.created_at).toLocaleDateString('ar-EG')}</span>
+                <>
+                    <div className="grid gap-4">
+                        {posts.map((post, index) => (
+                            <Link href={`/forum/${post.id}`} key={post.id}>
+                                <Card
+                                    className="bg-white/[0.02] border-white/5 hover:border-emerald-500/50 hover:bg-white/[0.04] transition-all duration-300 hover:shadow-[0_10px_40px_-10px_rgba(16,185,129,0.2)] hover:-translate-y-1 animate-fade-up group rounded-3xl"
+                                    style={{ animationDelay: `${index * 50}ms` }}
+                                >
+                                    <CardHeader className="p-6">
+                                        <div className="flex justify-between items-start gap-4">
+                                            <div className="flex-1">
+                                                <CardTitle className="text-xl text-white group-hover:text-emerald-400 transition-colors line-clamp-1">
+                                                    {post.title}
+                                                </CardTitle>
+                                                <CardDescription className="line-clamp-2 mt-2 text-slate-400">
+                                                    {post.content}
+                                                </CardDescription>
+                                            </div>
                                         </div>
 
-                                        <div className="flex items-center gap-1.5 text-sm font-medium text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-full">
-                                            <MessageSquare className="w-4 h-4" />
-                                            <span>{(post.forum_replies as any)?.length || 0} رد</span>
+                                        <div className="flex items-center justify-between mt-6 pt-4 border-t border-white/5">
+                                            <div className="flex items-center gap-2 text-sm text-slate-400">
+                                                <UserCircle2 className="w-5 h-5" />
+                                                <span className="font-medium text-slate-300">
+                          {(post.profiles as any)?.full_name || 'طالب'}
+                        </span>
+                                                <span className="text-xs hidden sm:inline-block">• {new Date(post.created_at).toLocaleDateString('ar-EG')}</span>
+                                            </div>
+
+                                            <div className="flex items-center gap-1.5 text-sm font-medium text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-full">
+                                                <MessageSquare className="w-4 h-4" />
+                                                <span>{(post.forum_replies as any)?.length || 0} رد</span>
+                                            </div>
                                         </div>
-                                    </div>
-                                </CardHeader>
-                            </Card>
-                        </Link>
-                    ))}
-                </div>
+                                    </CardHeader>
+                                </Card>
+                            </Link>
+                        ))}
+                    </div>
+
+                    {/* أزرار الترقيم (Pagination) */}
+                    {totalPages > 1 && (
+                        <div className="flex justify-center items-center gap-2 mt-12 animate-fade-up">
+                            <Link href={`/forum?page=${currentPage - 1}`} className={currentPage === 1 ? 'pointer-events-none opacity-50' : ''}>
+                                <Button variant="outline" size="icon" className="bg-white/5 border-white/10 hover:bg-white/10"><ChevronRight className="w-4 h-4" /></Button>
+                            </Link>
+
+                            <div className="flex gap-1">
+                                {Array.from({ length: totalPages }).map((_, i) => (
+                                    <Link key={i} href={`/forum?page=${i + 1}`}>
+                                        <Button
+                                            variant={currentPage === i + 1 ? "default" : "outline"}
+                                            size="sm"
+                                            className={currentPage === i + 1 ? "bg-emerald-500 text-black font-bold" : "bg-white/5 border-white/10 text-white hover:bg-white/10"}
+                                        >
+                                            {i + 1}
+                                        </Button>
+                                    </Link>
+                                ))}
+                            </div>
+
+                            <Link href={`/forum?page=${currentPage + 1}`} className={currentPage === totalPages ? 'pointer-events-none opacity-50' : ''}>
+                                <Button variant="outline" size="icon" className="bg-white/5 border-white/10 hover:bg-white/10"><ChevronLeft className="w-4 h-4" /></Button>
+                            </Link>
+                        </div>
+                    )}
+                </>
             )}
         </div>
     )

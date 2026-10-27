@@ -3,17 +3,21 @@ import Image from 'next/image'
 import { createClient } from '@/lib/supabase/server'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Search, Sparkles } from 'lucide-react'
+import { Search, Sparkles, ChevronRight, ChevronLeft } from 'lucide-react'
 import { WishlistButton } from '@/components/wishlist-button'
 
 export default async function Home({
                                        searchParams
                                    }: {
-    searchParams: Promise<{ q?: string }>
+    searchParams: Promise<{ q?: string, page?: string }>
 }) {
     const supabase = await createClient()
-    const { q } = await searchParams
+    const { q, page } = await searchParams
+
     const searchQuery = q?.trim() || ''
+    const currentPage = Number(page) || 1
+    const itemsPerPage = 6 // عدد الكورسات في كل صفحة
+    const offset = (currentPage - 1) * itemsPerPage
 
     const { data: { user } } = await supabase.auth.getUser()
     let wishlistedCourseIds: string[] = []
@@ -29,28 +33,32 @@ export default async function Home({
         }
     }
 
+    // بناء الاستعلام مع حساب العدد الإجمالي
     let query = supabase
         .from('courses')
-        .select('*')
+        .select('*', { count: 'exact' })
         .eq('is_published', true)
 
     if (searchQuery) {
         query = query.ilike('title', `%${searchQuery}%`)
     }
 
-    const { data: courses } = await query.order('created_at', { ascending: false })
+    // تطبيق الـ Pagination (بناخد 6 كورسات بس)
+    const { data: courses, count } = await query
+        .order('created_at', { ascending: false })
+        .range(offset, offset + itemsPerPage - 1)
+
+    const totalPages = count ? Math.ceil(count / itemsPerPage) : 0
 
     const blurDataURL = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=";
 
     return (
         <div className="min-h-screen relative overflow-hidden">
 
-            {/* 🌟 Neon Glow Background */}
             <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[500px] bg-emerald-500/20 blur-[120px] rounded-full pointer-events-none -z-10" />
 
             <div className="container mx-auto px-4 md:px-6 lg:px-8 py-20">
 
-                {/* Hero Section */}
                 <div className="text-center mb-20 max-w-3xl mx-auto animate-fade-up">
                     <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-500/10 text-emerald-400 text-sm font-semibold mb-6 border border-emerald-500/20 backdrop-blur-md">
                         <Sparkles className="w-4 h-4" />
@@ -66,7 +74,6 @@ export default async function Home({
                         تصفح مجموعة من أفضل الكورسات التعليمية التي أعدها نخبة من المدرسين. تعلم من أي مكان وفي أي وقت.
                     </p>
 
-                    {/* شريط بحث زجاجي */}
                     <div className="max-w-2xl mx-auto relative group">
                         <form method="GET" action="/" className="relative flex items-center gap-2 bg-white/5 backdrop-blur-xl p-2 rounded-2xl border border-white/10 shadow-2xl">
                             <div className="relative flex-1">
@@ -85,12 +92,11 @@ export default async function Home({
                     </div>
                 </div>
 
-                {/* نتائج البحث / قائمة الكورسات */}
                 <div className="mb-8 flex justify-between items-end pb-4 animate-fade-up delay-200">
                     <h2 className="text-2xl font-bold text-white">
                         {searchQuery ? `نتائج البحث عن: "${searchQuery}"` : 'الكورسات المتاحة'}
                     </h2>
-                    <span className="text-sm font-medium text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-full">{courses?.length || 0} كورس</span>
+                    <span className="text-sm font-medium text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-full">{count || 0} كورس</span>
                 </div>
 
                 {(!courses || courses.length === 0) ? (
@@ -107,65 +113,70 @@ export default async function Home({
                         )}
                     </div>
                 ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                        {courses.map((course, index) => (
-                            <Link
-                                href={`/courses/${course.slug}`}
-                                key={course.id}
-                                // 🌟 تصميم الكارت الزجاجي (Glassmorphism + Hover Glow)
-                                className="group relative flex flex-col rounded-3xl bg-white/[0.02] border border-white/5 hover:border-emerald-500/50 hover:bg-white/[0.04] transition-all duration-300 hover:-translate-y-2 hover:shadow-[0_10px_40px_-10px_rgba(16,185,129,0.2)] animate-fade-up overflow-hidden"
-                                style={{ animationDelay: `${index * 100}ms` }}
-                            >
-                                <div className="relative aspect-video w-full bg-slate-800 overflow-hidden">
-                                    <WishlistButton
-                                        courseId={course.id}
-                                        initialIsWishlisted={wishlistedCourseIds.includes(course.id)}
-                                        isLoggedIn={!!user}
-                                    />
-
-                                    <div className="absolute top-3 right-3 bg-emerald-500/20 backdrop-blur-md text-emerald-400 text-xs font-bold px-3 py-1 rounded-full border border-emerald-500/30 z-10">
-                                        جديد
-                                    </div>
-
-                                    {course.thumbnail_url ? (
-                                        <Image
-                                            src={course.thumbnail_url}
-                                            alt={course.title}
-                                            fill
-                                            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                                            placeholder="blur"
-                                            blurDataURL={blurDataURL}
-                                            className="object-cover group-hover:scale-110 transition-transform duration-700 ease-out opacity-80 group-hover:opacity-100"
+                    <>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                            {courses.map((course, index) => (
+                                <Link
+                                    href={`/courses/${course.slug}`}
+                                    key={course.id}
+                                    className="group relative flex flex-col rounded-3xl bg-white/[0.02] border border-white/5 hover:border-emerald-500/50 hover:bg-white/[0.04] transition-all duration-300 hover:-translate-y-2 hover:shadow-[0_10px_40px_-10px_rgba(16,185,129,0.2)] animate-fade-up overflow-hidden"
+                                    style={{ animationDelay: `${index * 100}ms` }}
+                                >
+                                    <div className="relative aspect-video w-full bg-slate-800 overflow-hidden">
+                                        <WishlistButton
+                                            courseId={course.id}
+                                            initialIsWishlisted={wishlistedCourseIds.includes(course.id)}
+                                            isLoggedIn={!!user}
                                         />
-                                    ) : (
-                                        <div className="flex items-center justify-center w-full h-full text-slate-500 text-sm">
-                                            لا توجد صورة
-                                        </div>
-                                    )}
-                                    <div className="absolute inset-0 bg-gradient-to-t from-[#0B0F17] to-transparent opacity-80" />
-                                </div>
+                                        <div className="absolute top-3 right-3 bg-emerald-500/20 backdrop-blur-md text-emerald-400 text-xs font-bold px-3 py-1 rounded-full border border-emerald-500/30 z-10">جديد</div>
+                                        {course.thumbnail_url ? (
+                                            <Image src={course.thumbnail_url} alt={course.title} fill sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" placeholder="blur" blurDataURL={blurDataURL} className="object-cover group-hover:scale-110 transition-transform duration-700 ease-out opacity-80 group-hover:opacity-100" />
+                                        ) : (
+                                            <div className="flex items-center justify-center w-full h-full text-slate-500 text-sm">لا توجد صورة</div>
+                                        )}
+                                        <div className="absolute inset-0 bg-gradient-to-t from-[#0B0F17] to-transparent opacity-80" />
+                                    </div>
 
-                                <div className="p-6 flex-1 flex flex-col relative z-10">
-                                    <h3 className="text-xl font-bold mb-3 line-clamp-1 text-white group-hover:text-emerald-400 transition-colors">
-                                        {course.title}
-                                    </h3>
-                                    <p className="text-sm text-slate-400 line-clamp-2 min-h-[40px] mb-6 flex-1">
-                                        {course.description || 'لا يوجد وصف لهذا الكورس.'}
-                                    </p>
+                                    <div className="p-6 flex-1 flex flex-col relative z-10">
+                                        <h3 className="text-xl font-bold mb-3 line-clamp-1 text-white group-hover:text-emerald-400 transition-colors">{course.title}</h3>
+                                        <p className="text-sm text-slate-400 line-clamp-2 min-h-[40px] mb-6 flex-1">{course.description || 'لا يوجد وصف لهذا الكورس.'}</p>
 
-                                    <div className="flex justify-between items-center pt-4 border-t border-white/5 mt-auto">
-                                        <div className="text-xl font-bold text-white">
-                                            {course.price === 0 ? 'مجاني' : `${course.price} ج.م`}
-                                        </div>
-                                        <div className="text-sm font-bold text-emerald-400 flex items-center gap-1">
-                                            عرض الكورس
-                                            <span className="group-hover:-translate-x-1 transition-transform">←</span>
+                                        <div className="flex justify-between items-center pt-4 border-t border-white/5 mt-auto">
+                                            <div className="text-xl font-bold text-white">{course.price === 0 ? 'مجاني' : `${course.price} ج.م`}</div>
+                                            <div className="text-sm font-bold text-emerald-400 flex items-center gap-1">عرض الكورس <span className="group-hover:-translate-x-1 transition-transform">←</span></div>
                                         </div>
                                     </div>
+                                </Link>
+                            ))}
+                        </div>
+
+                        {/* أزرار الترقيم (Pagination) */}
+                        {totalPages > 1 && (
+                            <div className="flex justify-center items-center gap-2 mt-12 animate-fade-up">
+                                <Link href={`/?page=${currentPage - 1}${searchQuery ? `&q=${searchQuery}` : ''}`} className={currentPage === 1 ? 'pointer-events-none opacity-50' : ''}>
+                                    <Button variant="outline" size="icon" className="bg-white/5 border-white/10 hover:bg-white/10"><ChevronRight className="w-4 h-4" /></Button>
+                                </Link>
+
+                                <div className="flex gap-1">
+                                    {Array.from({ length: totalPages }).map((_, i) => (
+                                        <Link key={i} href={`/?page=${i + 1}${searchQuery ? `&q=${searchQuery}` : ''}`}>
+                                            <Button
+                                                variant={currentPage === i + 1 ? "default" : "outline"}
+                                                size="sm"
+                                                className={currentPage === i + 1 ? "bg-emerald-500 text-black font-bold" : "bg-white/5 border-white/10 text-white hover:bg-white/10"}
+                                            >
+                                                {i + 1}
+                                            </Button>
+                                        </Link>
+                                    ))}
                                 </div>
-                            </Link>
-                        ))}
-                    </div>
+
+                                <Link href={`/?page=${currentPage + 1}${searchQuery ? `&q=${searchQuery}` : ''}`} className={currentPage === totalPages ? 'pointer-events-none opacity-50' : ''}>
+                                    <Button variant="outline" size="icon" className="bg-white/5 border-white/10 hover:bg-white/10"><ChevronLeft className="w-4 h-4" /></Button>
+                                </Link>
+                            </div>
+                        )}
+                    </>
                 )}
             </div>
         </div>
