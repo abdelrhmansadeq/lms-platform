@@ -3,25 +3,34 @@
 import { useState, useRef, useEffect } from 'react'
 import YouTube, { YouTubeEvent, YouTubePlayer } from 'react-youtube'
 import { saveProgressAction } from './actions'
+import { Button } from '@/components/ui/button'
+import { useRouter } from 'next/navigation'
+import { Play } from 'lucide-react'
 
 export function VideoPlayer({
                                 youtubeId,
                                 lessonId,
                                 courseId,
-                                initialProgress
+                                initialProgress,
+                                nextLesson,
+                                courseSlug
                             }: {
     youtubeId: string
     lessonId: string
     courseId: string
     initialProgress: number
+    nextLesson: { id: string, title: string } | null
+    courseSlug: string
 }) {
     const [progress, setProgress] = useState(0)
+    const [showNext, setShowNext] = useState(false)
+    const [countdown, setCountdown] = useState(5)
     const playerRef = useRef<YouTubePlayer | null>(null)
     const lastSavedRef = useRef(initialProgress)
     const latestTimeRef = useRef(initialProgress)
     const durationRef = useRef(0)
+    const router = useRouter()
 
-    // إعدادات المشغل
     const opts = {
         height: '100%',
         width: '100%',
@@ -37,17 +46,20 @@ export function VideoPlayer({
         playerRef.current = event.target
         durationRef.current = event.target.getDuration()
 
-        // لو الطالب رجع للدرس تاني، نكمل من حيث وقف
         if (initialProgress > 0) {
             event.target.seekTo(initialProgress, true)
         }
     }
 
     const onStateChange = (event: YouTubeEvent) => {
-        // 1 = playing, 2 = paused, 0 = ended
-        if (event.data === 2 || event.data === 0) {
-            // لو وقف أو الفيديو خلص، احفظ فوراً
+        if (event.data === 2) {
             saveProgressImmediately()
+        }
+        if (event.data === 0) { // 0 = Ended
+            saveProgressImmediately()
+            if (nextLesson) {
+                setShowNext(true)
+            }
         }
     }
 
@@ -59,6 +71,18 @@ export function VideoPlayer({
             await saveProgressAction(lessonId, courseId, currentTime, durationRef.current)
         }
     }
+
+    useEffect(() => {
+        let timer: NodeJS.Timeout
+
+        if (showNext && countdown > 0) {
+            timer = setTimeout(() => setCountdown(prev => prev - 1), 1000)
+        } else if (showNext && countdown === 0) {
+            router.push(`/learn/${courseSlug}/${nextLesson?.id}`)
+        }
+
+        return () => clearTimeout(timer)
+    }, [showNext, countdown, nextLesson, courseSlug, router])
 
     useEffect(() => {
         const interval = setInterval(async () => {
@@ -73,7 +97,6 @@ export function VideoPlayer({
                 const percentage = (currentTime / duration) * 100
                 setProgress(percentage)
 
-                // نحفظ التقدم في الداتابيز كل 10 ثواني بس
                 if (Math.abs(currentTime - lastSavedRef.current) >= 10) {
                     lastSavedRef.current = currentTime
                     await saveProgressAction(lessonId, courseId, currentTime, duration)
@@ -81,10 +104,8 @@ export function VideoPlayer({
             }
         }, 1000)
 
-        // --- السر هنا: لما الطالب يقفل الصفحة أو يروح لصفحة تانية، بنحفظ آخر ثانية ---
         return () => {
             clearInterval(interval)
-            // بنستخدم القيمة اللي في الـ ref عشان نتجنب مشاكل الـ stale closures
             if (latestTimeRef.current > lastSavedRef.current && durationRef.current > 0) {
                 saveProgressAction(lessonId, courseId, latestTimeRef.current, durationRef.current)
             }
@@ -93,7 +114,7 @@ export function VideoPlayer({
 
     return (
         <div className="space-y-4">
-            <div className="aspect-video w-full rounded-2xl overflow-hidden border border-border bg-black shadow-2xl relative">
+            <div className="aspect-video w-full rounded-3xl overflow-hidden border border-white/10 bg-black shadow-2xl relative group">
                 <YouTube
                     videoId={youtubeId}
                     opts={opts}
@@ -102,17 +123,39 @@ export function VideoPlayer({
                     className="absolute top-0 left-0 w-full h-full"
                     iframeClassName="w-full h-full"
                 />
+
+                {/* شاشة الدرس التالي */}
+                {showNext && nextLesson && (
+                    <div className="absolute inset-0 bg-[#0B0F17]/95 backdrop-blur-sm z-20 flex flex-col items-center justify-center text-center p-6 animate-fade-in">
+                        <h3 className="text-slate-400 text-sm font-medium mb-2">الدرس التالي</h3>
+                        <h2 className="text-2xl font-bold text-white mb-8">{nextLesson.title}</h2>
+
+                        <div className="w-20 h-20 rounded-full border-4 border-emerald-500/30 flex items-center justify-center mb-8 relative">
+                            <svg className="absolute inset-0 w-full h-full transform -rotate-90">
+                                <circle cx="50%" cy="50%" r="46%" fill="transparent" stroke="currentColor" strokeWidth="2" className="text-emerald-500" strokeDasharray="280" strokeDashoffset={280 - (280 * (5 - countdown) / 5)} />
+                            </svg>
+                            <span className="text-3xl font-bold text-white">{countdown}</span>
+                        </div>
+
+                        <Button
+                            onClick={() => router.push(`/learn/${courseSlug}/${nextLesson.id}`)}
+                            className="bg-emerald-500 hover:bg-emerald-400 text-black font-bold h-12 px-8 gap-2"
+                        >
+                            <Play className="w-4 h-4" />
+                            بدء الدرس الآن
+                        </Button>
+                    </div>
+                )}
             </div>
 
-            {/* شريط التقدم */}
             <div className="flex items-center gap-4">
-                <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+                <div className="flex-1 h-2 bg-white/10 rounded-full overflow-hidden">
                     <div
-                        className="h-full bg-primary rounded-full transition-all duration-1000 ease-linear"
+                        className="h-full bg-emerald-500 rounded-full shadow-[0_0_10px_rgba(16,185,129,0.8)] transition-all duration-1000 ease-linear"
                         style={{ width: `${progress}%` }}
                     />
                 </div>
-                <span className="text-sm font-medium text-muted-foreground w-12 text-left" dir="ltr">
+                <span className="text-sm font-bold text-emerald-400 w-12 text-left" dir="ltr">
           {Math.round(progress)}%
         </span>
             </div>

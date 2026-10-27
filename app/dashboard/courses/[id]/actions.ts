@@ -117,27 +117,37 @@ export async function deleteCourseAction(courseId: string) {
 }
 
 // 5. توليد كود تفعيل
-export async function generateActivationCodeAction(courseId: string) {
+// 5. توليد أكواد تفعيل (جماعي)
+export async function generateBulkActivationCodesAction(courseId: string, count: number) {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
 
     if (!user) return { error: 'غير مصرح' }
 
+    if (count < 1 || count > 100) {
+        return { error: 'يجب أن يكون عدد الأكواد بين 1 و 100' }
+    }
+
     const { data: course } = await supabase.from('courses').select('instructor_id').eq('id', courseId).single()
     if (course?.instructor_id !== user.id) return { error: 'غير مصرح لك بتوليد أكواد لهذا الكورس' }
 
-    const randomString = Math.random().toString(36).substring(2, 8).toUpperCase()
-    const newCode = `ACT-${randomString}`
+    // تجهيز المصفوفة
+    const codesToInsert = []
+    for (let i = 0; i < count; i++) {
+        const randomString = Math.random().toString(36).substring(2, 8).toUpperCase()
+        codesToInsert.push({
+            code: `ACT-${randomString}`,
+            course_id: courseId,
+        })
+    }
 
-    const { error } = await supabase.from('activation_codes').insert({
-        code: newCode,
-        course_id: courseId,
-    })
+    // إدخالهم دفعة واحدة
+    const { error } = await supabase.from('activation_codes').insert(codesToInsert)
 
-    if (error) return { error: 'حدث خطأ أثناء توليد الكود، حاول مرة أخرى' }
+    if (error) return { error: 'حدث خطأ أثناء توليد الأكواد، حاول مرة أخرى' }
 
     revalidatePath(`/dashboard/courses/${courseId}`)
-    return { success: 'تم توليد الكود بنجاح' }
+    return { success: `تم توليد ${count} كود بنجاح` }
 }
 
 // 6. تعديل درس
@@ -240,4 +250,32 @@ export async function deleteAttachmentAction(attachmentId: string, courseId: str
 
     revalidatePath(`/dashboard/courses/${courseId}`)
     return { success: 'تم حذف المرفق بنجاح' }
+}
+
+// حفظ الترتيب الجديد للدروس
+export async function updateLessonOrderAction(courseId: string, updates: { id: string, position: number }[]) {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { error: 'غير مصرح' }
+
+    // التأكد إن الكورس بتاع المدرس
+    const { data: course } = await supabase.from('courses').select('instructor_id').eq('id', courseId).single()
+    if (course?.instructor_id !== user.id) return { error: 'غير مصرح لك' }
+
+    // خطوة أمان: عشان الداتابيز فيها Unique على (course_id, position)
+    // لو غيرنا درس من 1 لـ 2، والدرس اللي كان 2 لسه 2، هيضرب إيرور.
+    // عشان كده هنزود 1000 مؤقتاً على كل الأرقام، وبعدين نحط الأرقام النهائية.
+
+    // 1. إزاحة مؤقتة
+    for (const item of updates) {
+        await supabase.from('lessons').update({ position: item.position + 1000 }).eq('id', item.id)
+    }
+
+    // 2. الحفظ النهائي
+    for (const item of updates) {
+        await supabase.from('lessons').update({ position: item.position }).eq('id', item.id)
+    }
+
+    revalidatePath(`/dashboard/courses/${courseId}`)
+    return { success: true }
 }

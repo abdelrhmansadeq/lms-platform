@@ -6,10 +6,9 @@ import { Button } from '@/components/ui/button'
 import { AddLessonForm } from './add-lesson-form'
 import { PublishButton } from './publish-button'
 import { ActivationCodes } from './activation-codes'
-import { DeleteLessonButton, DeleteCourseButton } from './delete-buttons'
-import { AttachmentManager } from './attachment-manager'
-import { EditLessonDialog } from './edit-lesson-dialog'
-import { BookOpen, FileQuestion, Edit, ClipboardList, PlayCircle } from 'lucide-react'
+import { DeleteCourseButton } from './delete-buttons'
+import { SortableLessonsList } from './sortable-lessons'
+import { BookOpen, FileQuestion, Edit, ClipboardList } from 'lucide-react'
 
 export default async function CourseManagePage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = await params;
@@ -93,36 +92,11 @@ export default async function CourseManagePage({ params }: { params: Promise<{ i
                             <p className="text-slate-400">لم تقم بإضافة أي دروس لهذا الكورس بعد.</p>
                         </div>
                     ) : (
-                        <div className="space-y-2">
-                            {lessons?.map((lesson) => {
-                                const lessonAttachments = allAttachments.filter(a => a.lesson_id === lesson.id)
-
-                                return (
-                                    <div key={lesson.id} className="group flex items-center justify-between p-4 border border-white/5 rounded-2xl bg-white/[0.02] hover:bg-white/[0.04] transition-all duration-200">
-                                        <div className="flex items-center gap-4">
-                                            <div className="w-10 h-10 rounded-full bg-[#0B0F17] border border-white/10 flex items-center justify-center shrink-0 group-hover:border-emerald-500/50 transition-colors">
-                                                <PlayCircle className="w-5 h-5 text-slate-500 group-hover:text-emerald-400" />
-                                            </div>
-                                            <div>
-                                                <p className="font-bold text-slate-200 line-clamp-1">{lesson.title}</p>
-                                                <p className="text-xs text-slate-500 font-mono mt-1" dir="ltr">ID: {lesson.youtube_id}</p>
-                                            </div>
-                                        </div>
-
-                                        <div className="flex items-center gap-1 opacity-50 group-hover:opacity-100 transition-opacity">
-                                            <AttachmentManager
-                                                lessonId={lesson.id}
-                                                courseId={course.id}
-                                                lessonTitle={lesson.title}
-                                                initialAttachments={lessonAttachments}
-                                            />
-                                            <EditLessonDialog lesson={lesson} courseId={course.id} />
-                                            <DeleteLessonButton lessonId={lesson.id} courseId={course.id} />
-                                        </div>
-                                    </div>
-                                )
-                            })}
-                        </div>
+                        <SortableLessonsList
+                            initialLessons={lessons as any || []}
+                            courseId={course.id}
+                            allAttachments={allAttachments as any || []}
+                        />
                     )}
                 </div>
 

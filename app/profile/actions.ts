@@ -11,16 +11,44 @@ export async function updateProfileAction(_prevState: { error?: string; success?
 
     const fullName = formData.get('full_name') as string
     const bio = formData.get('bio') as string
+    const avatarFile = formData.get('avatar_file') as File | null
 
     if (!fullName || fullName.trim().length < 3) {
         return { error: 'الاسم مطلوب (3 أحرف على الأقل)' }
+    }
+
+    // جلب الصورة القديمة عشان نحافظ عليها لو مفيش صورة جديدة
+    const { data: currentProfile } = await supabase
+        .from('profiles')
+        .select('avatar_url')
+        .eq('id', user.id)
+        .single()
+
+    let newAvatarUrl = currentProfile?.avatar_url || null
+
+    // لو المستخدم رفع صورة جديدة
+    if (avatarFile && avatarFile.size > 0) {
+        const fileExt = avatarFile.name.split('.').pop()
+        const fileName = `${user.id}-${Date.now()}.${fileExt}`
+
+        const { error: uploadError } = await supabase.storage
+            .from('avatars')
+            .upload(fileName, avatarFile)
+
+        if (!uploadError) {
+            const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(fileName)
+            newAvatarUrl = urlData.publicUrl
+        } else {
+            return { error: 'حدث خطأ أثناء رفع الصورة' }
+        }
     }
 
     const { error } = await supabase
         .from('profiles')
         .update({
             full_name: fullName.trim(),
-            bio: bio?.trim() || null
+            bio: bio?.trim() || null,
+            avatar_url: newAvatarUrl
         })
         .eq('id', user.id)
 

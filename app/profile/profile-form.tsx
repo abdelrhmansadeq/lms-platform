@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 'use client'
 
 import { useActionState, useEffect } from 'react'
@@ -7,12 +8,14 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { toast } from 'sonner'
+import { ImagePlus } from 'lucide-react'
 
 type ProfileData = {
     full_name: string | null;
     email: string;
     role: string;
     bio: string | null;
+    avatar_url: string | null;
 }
 
 export function ProfileForm({ profile }: { profile: ProfileData }) {
@@ -26,6 +29,34 @@ export function ProfileForm({ profile }: { profile: ProfileData }) {
     return (
         <form action={formAction} className="space-y-6">
 
+            {/* عرض الصورة الشخصية */}
+            <div className="flex flex-col items-center gap-4 mb-6">
+                {profile.avatar_url ? (
+                    <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-emerald-500/20 shadow-[0_0_20px_-5px_rgba(16,185,129,0.3)]">
+                        <img
+                            src={profile.avatar_url}
+                            alt={profile.full_name || 'Profile'}
+                            className="w-full h-full object-cover"
+                        />
+                    </div>
+                ) : (
+                    <div className="w-24 h-24 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 text-3xl font-bold">
+                        {profile.full_name?.charAt(0) || '?'}
+                    </div>
+                )}
+
+                <div className="w-full max-w-xs">
+                    <Label htmlFor="avatar_file" className="text-slate-300 mb-2 block text-center">تغيير الصورة الشخصية</Label>
+                    <Input
+                        id="avatar_file"
+                        name="avatar_file"
+                        type="file"
+                        accept="image/*"
+                        className="cursor-pointer bg-black/20 border-white/10 file:bg-emerald-500/10 file:text-emerald-400 file:border-0 file:rounded-md file:px-4 file:py-2 file:mr-4 hover:file:bg-emerald-500/20 transition-all text-slate-400 h-11"
+                    />
+                </div>
+            </div>
+
             <div className="space-y-2">
                 <Label className="text-slate-300">البريد الإلكتروني</Label>
                 <Input
@@ -34,7 +65,6 @@ export function ProfileForm({ profile }: { profile: ProfileData }) {
                     dir="ltr"
                     className="text-left bg-black/40 border-white/5 text-slate-500 cursor-not-allowed h-11"
                 />
-                <p className="text-xs text-slate-500">لا يمكن تغيير البريد الإلكتروني.</p>
             </div>
 
             <div className="space-y-2">

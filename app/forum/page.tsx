@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { Button } from '@/components/ui/button'
@@ -13,15 +14,14 @@ export default async function ForumPage({
     const { page } = await searchParams
 
     const currentPage = Number(page) || 1
-    const itemsPerPage = 6 // عدد المواضيع في كل صفحة
+    const itemsPerPage = 6
     const offset = (currentPage - 1) * itemsPerPage
 
-    // بنجيب العدد الإجمالي والمواضيع في نفس الوقت
     const { data: posts, count } = await supabase
         .from('forum_posts')
         .select(`
       id, title, content, created_at,
-      profiles (full_name),
+      profiles (full_name, avatar_url),
       forum_replies (id)
     `, { count: 'exact' })
         .order('created_at', { ascending: false })
@@ -32,7 +32,6 @@ export default async function ForumPage({
     return (
         <div className="container mx-auto px-4 md:px-6 lg:px-8 py-12 max-w-5xl relative">
 
-            {/* Glow */}
             <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-[600px] h-[300px] bg-emerald-500/10 blur-[120px] rounded-full pointer-events-none -z-10" />
 
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-10 animate-fade-up">
@@ -85,7 +84,12 @@ export default async function ForumPage({
 
                                         <div className="flex items-center justify-between mt-6 pt-4 border-t border-white/5">
                                             <div className="flex items-center gap-2 text-sm text-slate-400">
-                                                <UserCircle2 className="w-5 h-5" />
+                                                {/* عرض الصورة الشخصية */}
+                                                {(post.profiles as any)?.avatar_url ? (
+                                                    <img src={(post.profiles as any).avatar_url} alt="Avatar" className="w-6 h-6 rounded-full object-cover border border-white/10" />
+                                                ) : (
+                                                    <UserCircle2 className="w-5 h-5" />
+                                                )}
                                                 <span className="font-medium text-slate-300">
                           {(post.profiles as any)?.full_name || 'طالب'}
                         </span>
@@ -103,7 +107,6 @@ export default async function ForumPage({
                         ))}
                     </div>
 
-                    {/* أزرار الترقيم (Pagination) */}
                     {totalPages > 1 && (
                         <div className="flex justify-center items-center gap-2 mt-12 animate-fade-up">
                             <Link href={`/forum?page=${currentPage - 1}`} className={currentPage === 1 ? 'pointer-events-none opacity-50' : ''}>

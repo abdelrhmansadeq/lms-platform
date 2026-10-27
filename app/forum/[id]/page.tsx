@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 import Image from 'next/image'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
@@ -13,14 +14,14 @@ type PostWithProfile = {
     content: string;
     image_url: string | null;
     created_at: string;
-    profiles: { full_name: string | null } | null;
+    profiles: { full_name: string | null; avatar_url: string | null; } | null;
 }
 
 type ReplyWithProfile = {
     id: string;
     content: string;
     created_at: string;
-    profiles: { full_name: string | null } | null;
+    profiles: { full_name: string | null; avatar_url: string | null; } | null;
 }
 
 export default async function PostDetailsPage({ params }: { params: Promise<{ id: string }> }) {
@@ -30,7 +31,7 @@ export default async function PostDetailsPage({ params }: { params: Promise<{ id
 
     const { data: postData } = await supabase
         .from('forum_posts')
-        .select(`id, title, content, image_url, created_at, profiles (full_name)`)
+        .select(`id, title, content, image_url, created_at, profiles (full_name, avatar_url)`)
         .eq('id', id)
         .single()
 
@@ -39,7 +40,7 @@ export default async function PostDetailsPage({ params }: { params: Promise<{ id
 
     const { data: repliesData } = await supabase
         .from('forum_replies')
-        .select(`id, content, created_at, profiles (full_name)`)
+        .select(`id, content, created_at, profiles (full_name, avatar_url)`)
         .eq('post_id', id)
         .order('created_at', { ascending: true })
 
@@ -54,8 +55,7 @@ export default async function PostDetailsPage({ params }: { params: Promise<{ id
             <div className="mb-6 animate-fade-up">
                 <Link href="/forum">
                     <Button variant="ghost" className="gap-2 hover:bg-white/5 text-slate-300 hover:text-white">
-                        <ArrowRight className="w-4 h-4" />
-                        العودة للمنتدى
+                        <ArrowRight className="w-4 h-4" /> العودة للمنتدى
                     </Button>
                 </Link>
             </div>
@@ -64,9 +64,14 @@ export default async function PostDetailsPage({ params }: { params: Promise<{ id
                 <CardHeader className="border-b border-white/5 pb-4 bg-white/[0.01]">
                     <CardTitle className="text-2xl md:text-3xl mb-4 text-white">{post.title}</CardTitle>
                     <div className="flex items-center gap-2 text-sm text-slate-400">
-                        <div className="w-8 h-8 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 font-bold">
-                            {post.profiles?.full_name?.charAt(0) || <UserCircle2 className="w-5 h-5" />}
-                        </div>
+                        {/* الصورة الشخصية */}
+                        {post.profiles?.avatar_url ? (
+                            <img src={post.profiles.avatar_url} alt="Avatar" className="w-8 h-8 rounded-full object-cover border border-white/10" />
+                        ) : (
+                            <div className="w-8 h-8 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 font-bold">
+                                {post.profiles?.full_name?.charAt(0) || <UserCircle2 className="w-5 h-5" />}
+                            </div>
+                        )}
                         <span className="font-semibold text-slate-200">{post.profiles?.full_name || 'طالب'}</span>
                         <span>•</span>
                         <span>{new Date(post.created_at).toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
@@ -77,15 +82,7 @@ export default async function PostDetailsPage({ params }: { params: Promise<{ id
 
                     {post.image_url && (
                         <div className="relative w-full max-h-[500px] rounded-2xl overflow-hidden border border-white/10">
-                            <Image
-                                src={post.image_url}
-                                alt="مرفق الموضوع"
-                                width={800}
-                                height={500}
-                                className="w-full h-auto object-contain bg-black/40"
-                                placeholder="blur"
-                                blurDataURL={blurDataURL}
-                            />
+                            <Image src={post.image_url} alt="مرفق الموضوع" width={800} height={500} className="w-full h-auto object-contain bg-black/40" placeholder="blur" blurDataURL={blurDataURL} />
                         </div>
                     )}
                 </CardContent>
@@ -93,8 +90,7 @@ export default async function PostDetailsPage({ params }: { params: Promise<{ id
 
             <div className="space-y-6 animate-fade-up delay-200">
                 <h3 className="text-xl font-bold flex items-center gap-2 text-white">
-                    <MessageSquare className="w-5 h-5 text-emerald-400" />
-                    الردود ({replies.length})
+                    <MessageSquare className="w-5 h-5 text-emerald-400" /> الردود ({replies.length})
                 </h3>
 
                 {user ? (
@@ -111,9 +107,14 @@ export default async function PostDetailsPage({ params }: { params: Promise<{ id
                         replies.map((reply) => (
                             <div key={reply.id} className="p-5 bg-white/[0.02] border border-white/5 rounded-2xl shadow-sm">
                                 <div className="flex items-center gap-3 mb-3">
-                                    <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-slate-300 font-bold">
-                                        {reply.profiles?.full_name?.charAt(0) || 'ط'}
-                                    </div>
+                                    {/* صورة صاحب الرد */}
+                                    {reply.profiles?.avatar_url ? (
+                                        <img src={reply.profiles.avatar_url} alt="Avatar" className="w-8 h-8 rounded-full object-cover border border-white/10" />
+                                    ) : (
+                                        <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-slate-300 font-bold">
+                                            {reply.profiles?.full_name?.charAt(0) || 'ط'}
+                                        </div>
+                                    )}
                                     <span className="font-semibold text-sm text-slate-200">{reply.profiles?.full_name || 'طالب'}</span>
                                     <span className="text-xs text-slate-500 mr-auto">
                     {new Date(reply.created_at).toLocaleDateString('ar-EG')}

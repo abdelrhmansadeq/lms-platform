@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
@@ -13,7 +14,8 @@ export async function MobileHeader() {
     let notifications = []
 
     if (user) {
-        const { data } = await supabase.from('profiles').select('full_name, role').eq('id', user.id).single()
+        // ضفنا avatar_url هنا
+        const { data } = await supabase.from('profiles').select('full_name, role, avatar_url').eq('id', user.id).single()
         profile = data
 
         const { data: notifs } = await supabase
@@ -45,9 +47,13 @@ export async function MobileHeader() {
                             <NotificationsBell initialNotifications={notifications} />
 
                             <Link href="/profile" className="flex items-center gap-2 ml-1">
-                                <div className="w-8 h-8 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 font-bold text-sm">
-                                    {profile?.full_name?.charAt(0) || <UserCircle2 className="w-5 h-5" />}
-                                </div>
+                                {profile?.avatar_url ? (
+                                    <img src={profile.avatar_url} alt="Avatar" className="w-8 h-8 rounded-full object-cover border border-white/20" />
+                                ) : (
+                                    <div className="w-8 h-8 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 font-bold text-sm">
+                                        {profile?.full_name?.charAt(0) || <UserCircle2 className="w-4 h-4" />}
+                                    </div>
+                                )}
                             </Link>
                             <form action={logoutAction}>
                                 <Button variant="ghost" size="icon" className="text-slate-400 hover:text-red-400 hover:bg-white/5 h-8 w-8 ml-1">
