@@ -2,7 +2,8 @@ import type { Metadata } from 'next'
 import { Inter, IBM_Plex_Sans_Arabic } from 'next/font/google'
 import './globals.css'
 import { Navbar } from '@/components/navbar'
-import { MobileHeader } from '@/components/mobile-header' // <--- ضفنا ده
+import { MobileHeader } from '@/components/mobile-header'
+import { WhatsAppButton } from '@/components/whatsapp-button' // <--- ضفنا ده
 import { Toaster } from 'sonner'
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter', display: 'swap' })
@@ -27,18 +28,16 @@ export default function RootLayout({
         <html lang="ar" dir="rtl">
         <body className={`${inter.variable} ${ibmPlexArabic.variable} font-sans bg-background text-foreground min-h-screen flex flex-col antialiased`}>
 
-        {/* الهيدر الخاص بالموبايل */}
         <MobileHeader />
-
-        {/* النافبار الخاص بالكمبيوتر */}
         <Navbar />
 
-        {/* المحتوى الأساسي مع مساحة سفلية للموبايل عشان الشريط السفلي */}
         <main className="flex-1 pb-20 md:pb-0">
             {children}
         </main>
 
-        {/* الإشعارات */}
+        {/* زرار الواتساب العائم */}
+        <WhatsAppButton />
+
         <Toaster position="top-center" richColors />
         </body>
         </html>
