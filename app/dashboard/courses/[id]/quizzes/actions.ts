@@ -18,6 +18,7 @@ export async function createQuizAction(_prevState: { error?: string; success?: s
 
     const courseId = formData.get('courseId') as string
     const title = formData.get('title') as string
+    const durationMinutes = Number(formData.get('duration_minutes')) || 0 // <-- ضفنا الوقت
     const questionsJson = formData.get('questions') as string
 
     if (!title || title.trim().length < 3) {
@@ -45,7 +46,8 @@ export async function createQuizAction(_prevState: { error?: string; success?: s
         .insert({
             course_id: courseId,
             instructor_id: user.id,
-            title: title.trim()
+            title: title.trim(),
+            duration_minutes: durationMinutes // <-- حفظنا الوقت هنا
         })
         .select('id')
         .single()
@@ -56,7 +58,7 @@ export async function createQuizAction(_prevState: { error?: string; success?: s
     const questionsToInsert = questions.map((q) => ({
         quiz_id: quiz.id,
         question_text: q.text,
-        options: q.options, // Supabase بتدعم JSONB أوتوماتيك
+        options: q.options,
         correct_option_index: q.correctIndex
     }))
 

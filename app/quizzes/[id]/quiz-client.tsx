@@ -1,11 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { submitQuizAction } from './actions'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { toast } from 'sonner'
-import { CheckCircle2, Award, AlertCircle, RotateCcw, Flag, Check } from 'lucide-react'
+import { CheckCircle2, Award, AlertCircle, RotateCcw, Flag, Check, Clock, ShieldAlert } from 'lucide-react'
 import Link from 'next/link'
 import { Progress } from '@/components/ui/progress'
 
@@ -19,17 +19,83 @@ export function QuizClient({
                                quizId,
                                quizTitle,
                                courseSlug,
-                               questions
+                               questions,
+                               durationMinutes
                            }: {
     quizId: string,
     quizTitle: string,
     courseSlug: string,
-    questions: Question[]
+    questions: Question[],
+    durationMinutes: number
 }) {
     const [answers, setAnswers] = useState<Record<string, number>>({})
     const [flagged, setFlagged] = useState<Set<string>>(new Set())
     const [isPending, setIsPending] = useState(false)
     const [result, setResult] = useState<{ score: number, totalQuestions: number, percentage: number } | null>(null)
+
+    // حالة العداد (بالثواني)
+    const [timeLeft, setTimeLeft] = useState(durationMinutes * 60)
+
+    // دالة التسليم (بتقبل باراميتر عشان نعرف لو ده تسليم تلقائي)
+    const handleSubmit = useCallback(async (isAutoSubmit = false) => {
+        if (isPending || result) return;
+
+        // لو تسليم يدوي وفيه أسئلة مش مجاوبة
+        if (!isAutoSubmit && Object.keys(answers).length !== questions.length) {
+            toast.error('يرجى الإجابة على جميع الأسئلة قبل التسليم')
+            return
+        }
+
+        setIsPending(true)
+        const formattedAnswers = Object.keys(answers).map(qId => ({
+            questionId: qId,
+            selectedOption: answers[qId]
+        }))
+
+        const res = await submitQuizAction(quizId, formattedAnswers)
+
+        if (res.error) {
+            toast.error(res.error)
+            setIsPending(false)
+        } else if (res.success) {
+            setResult({
+                score: res.score!,
+                totalQuestions: res.totalQuestions!,
+                percentage: res.percentage!
+            })
+            if (isAutoSubmit) {
+                toast.warning('انتهى الوقت! تم تسليم الاختبار تلقائياً.')
+            } else {
+                toast.success('تم تسليم الاختبار بنجاح')
+            }
+            window.scrollTo({ top: 0, behavior: 'smooth' })
+        }
+    }, [isPending, result, answers, questions.length, quizId])
+
+    // منطق العداد التنازلي
+    useEffect(() => {
+        if (durationMinutes === 0 || result) return // لو مفيش وقت أو الاختبار خلص، العداد يقف
+
+        const timer = setInterval(() => {
+            setTimeLeft((prev) => {
+                if (prev <= 1) {
+                    clearInterval(timer)
+                    handleSubmit(true) // التسليم التلقائي لما الوقت يخلص
+                    return 0
+                }
+                return prev - 1
+            })
+        }, 1000)
+
+        return () => clearInterval(timer)
+    }, [durationMinutes, result, handleSubmit])
+
+    // تنسيق الوقت (مثلاً 09:45)
+    const formatTime = (seconds: number) => {
+        const m = Math.floor(seconds / 60)
+        const s = seconds % 60
+        return `${m < 10 ? '0' : ''}${m}:${s < 10 ? '0' : ''}${s}`
+    }
 
     const handleSelectOption = (questionId: string, optionIndex: number) => {
         setAnswers(prev => {
@@ -61,38 +127,11 @@ export function QuizClient({
         }
     }
 
-    const handleSubmit = async () => {
-        if (Object.keys(answers).length !== questions.length) {
-            toast.error('يرجى الإجابة على جميع الأسئلة قبل التسليم')
-            return
-        }
-
-        setIsPending(true)
-        const formattedAnswers = Object.keys(answers).map(qId => ({
-            questionId: qId,
-            selectedOption: answers[qId]
-        }))
-
-        const res = await submitQuizAction(quizId, formattedAnswers)
-
-        if (res.error) {
-            toast.error(res.error)
-            setIsPending(false)
-        } else if (res.success) {
-            setResult({
-                score: res.score!,
-                totalQuestions: res.totalQuestions!,
-                percentage: res.percentage!
-            })
-            toast.success('تم تسليم الاختبار بنجاح')
-            window.scrollTo({ top: 0, behavior: 'smooth' })
-        }
-    }
-
     const handleRetake = () => {
         setAnswers({})
         setFlagged(new Set())
         setResult(null)
+        setTimeLeft(durationMinutes * 60) // إعادة ضبط العداد
     }
 
     const answeredCount = Object.keys(answers).length
@@ -100,7 +139,7 @@ export function QuizClient({
 
     if (result) {
         return (
-            <Card className="bg-white/[0.02] border-white/10 shadow-2xl animate-fade-up text-center pt-8 max-w-xl mx-auto backdrop-blur-xl">
+            <Card className="bg-white/2 border-white/10 shadow-2xl animate-fade-up text-center pt-8 max-w-xl mx-auto backdrop-blur-xl">
                 <CardContent className="space-y-6">
                     <div className={`w-24 h-24 rounded-full flex items-center justify-center mx-auto border-2 ${result.percentage >= 50 ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-red-500/10 border-red-500/30'}`}>
                         {result.percentage >= 50 ? <Award className="w-12 h-12 text-emerald-400" /> : <AlertCircle className="w-12 h-12 text-red-400" />}
@@ -136,7 +175,18 @@ export function QuizClient({
     return (
         <div className="space-y-6 animate-fade-up max-w-3xl mx-auto">
             <div className="bg-white/5 backdrop-blur-xl p-6 rounded-2xl border border-white/10 shadow-lg sticky top-20 z-20">
-                <h1 className="text-2xl font-bold mb-4 text-white">{quizTitle}</h1>
+
+                <div className="flex justify-between items-start mb-4">
+                    <h1 className="text-2xl font-bold text-white">{quizTitle}</h1>
+
+                    {/* عداد الوقت */}
+                    {durationMinutes > 0 && (
+                        <div className={`flex items-center gap-2 px-4 py-2 rounded-xl border font-mono text-xl font-bold ${timeLeft < 60 ? 'bg-red-500/20 border-red-500/30 text-red-400 animate-pulse' : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'}`} dir="ltr">
+                            <Clock className="w-5 h-5" />
+                            {formatTime(timeLeft)}
+                        </div>
+                    )}
+                </div>
 
                 <div className="flex flex-wrap gap-2 mb-4">
                     {questions.map((q, idx) => {
@@ -218,7 +268,7 @@ export function QuizClient({
                 <Button
                     size="lg"
                     className="w-full shadow-[0_0_20px_-5px_rgba(16,185,129,0.6)] gap-2 text-lg h-14 bg-emerald-500 hover:bg-emerald-400 text-black font-bold"
-                    onClick={handleSubmit}
+                    onClick={() => handleSubmit(false)}
                     disabled={isPending || answeredCount !== questions.length}
                 >
                     {isPending ? 'جاري التصحيح...' : 'تسليم الاختبار'}

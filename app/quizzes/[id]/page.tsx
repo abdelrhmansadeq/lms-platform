@@ -5,10 +5,10 @@ import Link from 'next/link'
 import { ArrowRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
-// التعديل هنا: تعريف نوع للبيانات بدل any
 type QuizWithCourse = {
     id: string;
     title: string;
+    duration_minutes: number; // <-- ضفنا الوقت هنا
     courses: {
         id: string;
         slug: string;
@@ -23,11 +23,10 @@ export default async function QuizPage({ params }: { params: Promise<{ id: strin
 
     if (!user) redirect('/login')
 
-    // 1. جلب بيانات الاختبار والكورس المرتبط بيه
     const { data: quizData } = await supabase
         .from('quizzes')
         .select(`
-      id, title,
+      id, title, duration_minutes,
       courses (id, slug, title)
     `)
         .eq('id', id)
@@ -35,13 +34,11 @@ export default async function QuizPage({ params }: { params: Promise<{ id: strin
 
     if (!quizData) notFound()
 
-    // التعديل هنا: استخدمنا النوع اللي عرفناه فوق
     const quiz = quizData as unknown as QuizWithCourse;
     const course = quiz.courses;
 
     if (!course) notFound();
 
-    // 2. التأكد إن الطالب مشترك في الكورس ده
     const { data: enrollment } = await supabase
         .from('enrollments')
         .select('id')
@@ -50,10 +47,9 @@ export default async function QuizPage({ params }: { params: Promise<{ id: strin
         .single()
 
     if (!enrollment) {
-        redirect(`/courses/${course.slug}`) // لو مش مشترك يرجعه لصفحة الكورس
+        redirect(`/courses/${course.slug}`)
     }
 
-    // 3. جلب الأسئلة (بدون الإجابات الصحيحة عشان الأمان)
     const { data: questions } = await supabase
         .from('questions')
         .select('id, question_text, options')
@@ -72,7 +68,7 @@ export default async function QuizPage({ params }: { params: Promise<{ id: strin
         <div className="container mx-auto px-4 md:px-6 lg:px-8 py-8 max-w-3xl">
             <div className="mb-6 animate-fade-up">
                 <Link href={`/courses/${course.slug}`}>
-                    <Button variant="ghost" className="gap-2 hover:bg-muted">
+                    <Button variant="ghost" className="gap-2 hover:bg-muted text-slate-400 hover:text-white">
                         <ArrowRight className="w-4 h-4" />
                         العودة للكورس
                     </Button>
@@ -84,6 +80,7 @@ export default async function QuizPage({ params }: { params: Promise<{ id: strin
                 quizTitle={quiz.title}
                 courseSlug={course.slug}
                 questions={questions}
+                durationMinutes={quiz.duration_minutes || 0} // <-- بنبعت الوقت للعميل
             />
         </div>
     )
