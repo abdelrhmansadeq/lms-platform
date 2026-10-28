@@ -22,7 +22,7 @@ export function ActivationCodes({
     initialCodes: ActivationCode[]
 }) {
     const [isPending, setIsPending] = useState(false)
-    const [codes, setCodes] = useState<ActivationCode[]>(initialCodes)
+    const [codes] = useState<ActivationCode[]>(initialCodes)
     const [count, setCount] = useState("1")
 
     const handleGenerate = async () => {
@@ -51,7 +51,6 @@ export function ActivationCodes({
 
     return (
         <div className="space-y-4">
-            {/* أدوات التوليد */}
             <div className="flex flex-col gap-3 p-4 bg-white/5 rounded-xl border border-white/10">
                 <label className="text-sm font-medium text-slate-300">عدد الأكواد المطلوب توليدها</label>
                 <div className="flex gap-2">

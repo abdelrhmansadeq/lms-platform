@@ -7,8 +7,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { toast } from 'sonner'
 import { CheckCircle2, Award, AlertCircle, RotateCcw, Flag, Check, Clock } from 'lucide-react'
 import Link from 'next/link'
-import { Progress } from '@/components/ui/progress'
-import { useRouter } from 'next/navigation'
 
 type Question = {
     id: string
@@ -17,7 +15,6 @@ type Question = {
 }
 
 export function QuizClient({
-                               quizId,
                                quizTitle,
                                courseSlug,
                                questions,
@@ -25,7 +22,6 @@ export function QuizClient({
                                attemptId,
                                startedAt
                            }: {
-    quizId: string,
     quizTitle: string,
     courseSlug: string,
     questions: Question[],
@@ -37,9 +33,7 @@ export function QuizClient({
     const [flagged, setFlagged] = useState<Set<string>>(new Set())
     const [isPending, setIsPending] = useState(false)
     const [result, setResult] = useState<{ score: number, totalQuestions: number, percentage: number } | null>(null)
-    const router = useRouter()
 
-    // حساب الوقت المتبقي بناءً على وقت البدء
     const calculateTimeLeft = useCallback(() => {
         if (durationMinutes === 0) return 0
         const start = new Date(startedAt).getTime()
@@ -83,10 +77,9 @@ export function QuizClient({
             }
             window.scrollTo({ top: 0, behavior: 'smooth' })
         }
-    }, [isPending, result, answers, questions.length, quizId, attemptId])
+    }, [isPending, result, answers, questions.length, attemptId])
 
     useEffect(() => {
-        // تحديث العداد كل ثانية
         if (durationMinutes === 0 || result) return
 
         const timer = setInterval(() => {
@@ -99,7 +92,6 @@ export function QuizClient({
             }
         }, 1000)
 
-        // فحص أولي لو الوقت خلص فوراً
         if (timeLeft <= 0) {
             handleSubmit(true)
         }
@@ -141,7 +133,7 @@ export function QuizClient({
     }
 
     const handleRetake = () => {
-        window.location.reload() // إعادة تحميل عشان نبدأ محاولة جديدة
+        window.location.reload()
     }
 
     const answeredCount = Object.keys(answers).length

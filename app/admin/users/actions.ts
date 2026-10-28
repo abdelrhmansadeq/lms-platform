@@ -2,9 +2,10 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { SupabaseClient } from '@supabase/supabase-js'
 
 // دالة مساعدة للتأكد إن اللي بيعمل الأكشن ده أدمن
-async function verifyAdmin(supabase: any) {
+async function verifyAdmin(supabase: SupabaseClient) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return false
 

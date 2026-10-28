@@ -1,6 +1,6 @@
 'use client'
 
-import { useActionState, useEffect, useRef, useState } from 'react'
+import { useActionState, useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
@@ -74,7 +74,7 @@ export function AddLessonForm({ courseId }: { courseId: string }) {
                 <Label className="text-slate-300">ملاحظات أو محتوى (اختياري)</Label>
                 <RichTextEditor
                     content={content}
-                    onChangeAction={setContent} // <--- التعديل هنا
+                    onChangeAction={setContent}
                 />
             </div>
 

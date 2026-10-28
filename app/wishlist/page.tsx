@@ -6,14 +6,26 @@ import { Button } from '@/components/ui/button'
 import { Heart, ArrowRight } from 'lucide-react'
 import { WishlistButton } from '@/components/wishlist-button'
 
+// التعديل هنا: تعريف النوع بدل any
+type WishlistItem = {
+    course_id: string;
+    courses: {
+        id: string;
+        title: string;
+        slug: string;
+        description: string | null;
+        thumbnail_url: string | null;
+        price: number;
+    } | null;
+}
+
 export default async function WishlistPage() {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
 
     if (!user) redirect('/login')
 
-    // جلب كورسات المفضلة
-    const { data: wishlistItems } = await supabase
+    const { data: wishlistData } = await supabase
         .from('wishlists')
         .select(`
       course_id,
@@ -23,6 +35,8 @@ export default async function WishlistPage() {
     `)
         .eq('student_id', user.id)
         .order('created_at', { ascending: false })
+
+    const wishlistItems = (wishlistData as unknown as WishlistItem[]) || []
 
     const blurDataURL = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=";
 
@@ -49,7 +63,7 @@ export default async function WishlistPage() {
                 </div>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {wishlistItems.map((item: any, index) => {
+                    {wishlistItems.map((item, index) => {
                         const course = item.courses
                         if (!course) return null
 
@@ -61,7 +75,6 @@ export default async function WishlistPage() {
                                 style={{ animationDelay: `${index * 100}ms` }}
                             >
                                 <div className="relative h-48 w-full bg-muted border-b border-border overflow-hidden">
-                                    {/* زرار المفضلة عشان يقدر يمسحها من هنا مباشرة */}
                                     <WishlistButton
                                         courseId={course.id}
                                         initialIsWishlisted={true}

@@ -43,7 +43,6 @@ export default async function QuizPage({ params }: { params: Promise<{ id: strin
 
     if (!course) notFound();
 
-    // جلب الأسئلة عن طريق الدالة الآمنة (بدون الإجابات)
     const { data: questionsData, error: questionsError } = await supabase.rpc('get_quiz_questions', {
         p_quiz_id: quiz.id
     })
@@ -68,7 +67,6 @@ export default async function QuizPage({ params }: { params: Promise<{ id: strin
         )
     }
 
-    // بدء المحاولة (تسجيل وقت البدء)
     const attemptData = await startQuizAttemptAction(quiz.id, questions.length)
 
     if (attemptData.error) {
@@ -91,8 +89,8 @@ export default async function QuizPage({ params }: { params: Promise<{ id: strin
                 </Link>
             </div>
 
+            {/* التعديل هنا: شلنا quizId */}
             <QuizClient
-                quizId={quiz.id}
                 quizTitle={quiz.title}
                 courseSlug={course.slug}
                 questions={questions}

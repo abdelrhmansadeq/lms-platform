@@ -4,9 +4,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardDescription, CardFooter, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
-import { Progress } from '@/components/ui/progress'
 import { BookOpen, Sparkles } from 'lucide-react'
-import { WishlistButton } from '@/components/wishlist-button'
 
 type CourseData = {
     id: string;
@@ -32,7 +30,6 @@ export default async function MyCoursesPage() {
 
     if (!user) redirect('/login')
 
-    // 1. جلب الكورسات المشترك فيها
     const { data: enrollments } = await supabase
         .from('enrollments')
         .select(`
@@ -74,7 +71,6 @@ export default async function MyCoursesPage() {
         }
     }
 
-    // 2. جلب كورسات مقترحة (لو مفيش كورسات)
     let suggestedCourses: CourseData[] = []
     if (coursesWithProgress.length === 0) {
         const { data: suggested } = await supabase
@@ -103,7 +99,6 @@ export default async function MyCoursesPage() {
 
             {coursesWithProgress.length === 0 ? (
                 <div className="space-y-12">
-                    {/* الحالة الفاضية */}
                     <div className="text-center py-16 bg-white/[0.02] rounded-3xl border border-white/5 animate-fade-in backdrop-blur-sm">
                         <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-6">
                             <BookOpen className="w-10 h-10 text-slate-500" />
@@ -115,7 +110,6 @@ export default async function MyCoursesPage() {
                         </Link>
                     </div>
 
-                    {/* الكورسات المقترحة */}
                     {suggestedCourses.length > 0 && (
                         <div className="animate-fade-up delay-200">
                             <div className="flex items-center gap-2 mb-6">

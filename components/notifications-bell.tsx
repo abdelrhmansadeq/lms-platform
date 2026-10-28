@@ -1,7 +1,6 @@
 'use client'
 
-import { useState, useEffect, useId } from 'react'
-import Link from 'next/link'
+import { useState, useEffect } from 'react'
 import { Bell, Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
@@ -31,16 +30,11 @@ export function NotificationsBell({
     const router = useRouter()
     const supabase = createClient()
 
-    // 🌟 السر هنا: useId بيعمل اسم فريد لكل مكون عشان ميحصلش تعارض
-    const uniqueId = useId()
-    const channelName = `realtime_notifications_${currentUserId}_${uniqueId}`
-
     const unreadCount = notifications.filter(n => !n.is_read).length
 
-    // الاستماع للإشعارات الجديدة لحظة بلحظة (Realtime)
     useEffect(() => {
         const channel = supabase
-            .channel(channelName) // <-- استخدمنا الاسم الفريد هنا
+            .channel(`realtime_notifications_${currentUserId}_${Math.random()}`)
             .on(
                 'postgres_changes',
                 {
@@ -51,7 +45,6 @@ export function NotificationsBell({
                 },
                 (payload) => {
                     const newNotif = payload.new as Notification
-
                     setNotifications((prev) => [newNotif, ...prev])
 
                     toast.success(newNotif.title, {
@@ -68,7 +61,7 @@ export function NotificationsBell({
         return () => {
             supabase.removeChannel(channel)
         }
-    }, [currentUserId, supabase, router, channelName]) // <-- ضفنا channelName في الـ dependencies
+    }, [currentUserId, supabase, router])
 
     const handleNotificationClick = async (id: string, link: string, isRead: boolean) => {
         setIsOpen(false)

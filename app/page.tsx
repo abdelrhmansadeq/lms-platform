@@ -3,7 +3,7 @@ import Image from 'next/image'
 import { createClient } from '@/lib/supabase/server'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Search, Sparkles, ChevronRight, ChevronLeft, PlayCircle, Users, Award, ShieldCheck, CircleDollarSign } from 'lucide-react'
+import { Search, Sparkles, ChevronRight, ChevronLeft, PlayCircle, Users, Award, ShieldCheck } from 'lucide-react'
 import { WishlistButton } from '@/components/wishlist-button'
 
 export default async function Home({
@@ -16,7 +16,7 @@ export default async function Home({
 
     const searchQuery = q?.trim() || ''
     const categorySlug = category || ''
-    const priceFilter = price || 'all' // all, free, paid
+    const priceFilter = price || 'all'
     const currentPage = Number(page) || 1
     const itemsPerPage = 6
     const offset = (currentPage - 1) * itemsPerPage
@@ -35,17 +35,14 @@ export default async function Home({
         }
     }
 
-    // جلب التصنيفات
     const { data: categories } = await supabase.from('categories').select('id, name, slug')
 
-    // فلترة التصنيف
     let categoryId = null
     if (categorySlug) {
         const { data: catData } = await supabase.from('categories').select('id').eq('slug', categorySlug).single()
         if (catData) categoryId = catData.id
     }
 
-    // استعلام الكورسات
     let query = supabase
         .from('courses')
         .select('*', { count: 'exact' })
@@ -59,7 +56,6 @@ export default async function Home({
         query = query.eq('category_id', categoryId)
     }
 
-    // فلترة السعر
     if (priceFilter === 'free') {
         query = query.eq('price', 0)
     } else if (priceFilter === 'paid') {
@@ -72,13 +68,11 @@ export default async function Home({
 
     const totalPages = count ? Math.ceil(count / itemsPerPage) : 0
 
-    // إحصائيات سريعة للصفحة الرئيسية
     const { count: studentsCount } = await supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'student')
     const { count: coursesCount } = await supabase.from('courses').select('*', { count: 'exact', head: true }).eq('is_published', true)
 
     const blurDataURL = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=";
 
-    // دالة مساعدة لبناء الروابط مع الحفاظ على الفلاتر
     const buildUrl = (newCategory?: string, newPrice?: string, newPage?: number) => {
         const params = new URLSearchParams()
         if (searchQuery) params.set('q', searchQuery)
@@ -104,7 +98,6 @@ export default async function Home({
 
             <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[500px] bg-emerald-500/20 blur-[120px] rounded-full pointer-events-none -z-10" />
 
-            {/* 1. قسم الهيرو (Hero Section) */}
             <section className="pt-24 pb-20 px-4 md:px-6 lg:px-8 relative">
                 <div className="container mx-auto max-w-5xl text-center animate-fade-up">
                     <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-500/10 text-emerald-400 text-sm font-semibold mb-8 border border-emerald-500/20 backdrop-blur-md">
@@ -135,7 +128,6 @@ export default async function Home({
                 </div>
             </section>
 
-            {/* 2. قسم المميزات (Features) */}
             <section className="py-16 px-4 md:px-6 lg:px-8 bg-white/[0.01] border-y border-white/5">
                 <div className="container mx-auto max-w-6xl">
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -171,7 +163,6 @@ export default async function Home({
                 </div>
             </section>
 
-            {/* 3. قسم الإحصائيات */}
             <section className="py-16 border-b border-white/5 bg-black/20">
                 <div className="container mx-auto px-4 max-w-4xl">
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
@@ -195,7 +186,6 @@ export default async function Home({
                 </div>
             </section>
 
-            {/* 4. قسم الكورسات */}
             <section id="courses" className="py-20 px-4 md:px-6 lg:px-8">
                 <div className="container mx-auto">
 
@@ -204,7 +194,6 @@ export default async function Home({
                         <p className="text-slate-400">اختر المسار الذي يناسبك وابدأ التعلم فوراً.</p>
                     </div>
 
-                    {/* شريط البحث */}
                     <div className="max-w-2xl mx-auto mb-10 relative group">
                         <form method="GET" action="/" className="relative flex items-center gap-2 bg-white/5 backdrop-blur-xl p-2 rounded-2xl border border-white/10 shadow-2xl">
                             <div className="relative flex-1">
@@ -224,7 +213,6 @@ export default async function Home({
                         </form>
                     </div>
 
-                    {/* أزرار الفلترة (السعر) */}
                     <div className="flex flex-col items-center gap-4 mb-8">
                         <div className="flex items-center gap-2 bg-white/5 p-1 rounded-2xl border border-white/10">
                             <Link href={buildUrl(undefined, 'all')}>
@@ -245,7 +233,6 @@ export default async function Home({
                         </div>
                     </div>
 
-                    {/* أزرار التصنيفات */}
                     <div className="flex overflow-x-auto gap-3 pb-6 mb-6 scrollbar-hide justify-center">
                         <Link href={buildUrl('', undefined)}>
                             <Button
@@ -274,7 +261,6 @@ export default async function Home({
                         <span className="text-sm font-medium text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-full">{count || 0} كورس</span>
                     </div>
 
-                    {/* شبكة الكورسات */}
                     {(!courses || courses.length === 0) ? (
                         <div className="text-center py-24 bg-white/[0.02] rounded-3xl border border-white/5 shadow-sm animate-fade-in">
                             <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-6">
@@ -303,7 +289,6 @@ export default async function Home({
                                                 isLoggedIn={!!user}
                                             />
 
-                                            {/* بادج السعر */}
                                             <div className={`absolute top-3 right-3 backdrop-blur-md text-xs font-bold px-3 py-1 rounded-full border z-10 ${
                                                 course.price === 0
                                                     ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'

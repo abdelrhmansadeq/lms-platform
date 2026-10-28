@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { toast } from 'sonner'
-import { Paperclip, Trash2, FileText, Image as ImageIcon, File, Download } from 'lucide-react'
+import { Paperclip, Trash2, FileText, Image as ImageIcon, File } from 'lucide-react'
 import {
     Dialog,
     DialogContent,
@@ -17,11 +17,12 @@ import {
 } from "@/components/ui/dialog"
 import { useRouter } from 'next/navigation'
 
+// التعديل هنا: غيرنا file_url لـ file_path
 type Attachment = {
     id: string;
     title: string | null;
     file_name: string;
-    file_url: string;
+    file_path: string;
     file_type: string;
 }
 
@@ -95,7 +96,6 @@ export function AttachmentManager({
                         <input type="hidden" name="lessonId" value={lessonId} />
                         <input type="hidden" name="courseId" value={courseId} />
 
-                        {/* خانة اسم المرفق الجديدة */}
                         <div className="space-y-2">
                             <Label>اسم المرفق</Label>
                             <Input
@@ -142,11 +142,7 @@ export function AttachmentManager({
                       </span>
                                         </div>
                                         <div className="flex items-center gap-1 shrink-0">
-                                            <a href={file.file_url} target="_blank" rel="noopener noreferrer" download>
-                                                <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-primary">
-                                                    <Download className="w-4 h-4" />
-                                                </Button>
-                                            </a>
+                                            {/* هنا شلنا زرار التحميل المباشر لأن الملف بقى Private */}
                                             <Button
                                                 variant="ghost"
                                                 size="icon"

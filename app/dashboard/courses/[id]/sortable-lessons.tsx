@@ -11,7 +11,6 @@ import { AttachmentManager } from './attachment-manager'
 import { EditLessonDialog } from './edit-lesson-dialog'
 import { DeleteLessonButton } from './delete-buttons'
 
-// التعديل هنا: ضفنا content عشان يطابق النوع بتاع edit-lesson-dialog
 type Lesson = {
     id: string;
     title: string;
@@ -20,12 +19,13 @@ type Lesson = {
     position: number;
 };
 
+// التعديل هنا: غيرنا file_url لـ file_path
 type Attachment = {
     id: string;
     lesson_id: string;
     title: string | null;
     file_name: string;
-    file_url: string;
+    file_path: string;
     file_type: string;
 };
 
@@ -54,7 +54,6 @@ function SortableLessonItem({
             className={`group flex items-center justify-between p-4 border border-white/5 rounded-2xl bg-white/2 hover:bg-white/5 transition-colors ${isDragging ? 'border-emerald-500/50 shadow-2xl bg-white/10' : ''}`}
         >
             <div className="flex items-center gap-4">
-                {/* أيقونة السحب */}
                 <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing p-1 -ml-2 text-slate-500 hover:text-white transition-colors">
                     <GripVertical className="w-5 h-5" />
                 </div>
@@ -76,7 +75,6 @@ function SortableLessonItem({
                     lessonTitle={lesson.title}
                     initialAttachments={attachments}
                 />
-                {/* التعديل هنا: بنبعت الـ lesson كامل بالـ content بتاعه */}
                 <EditLessonDialog lesson={lesson} courseId={courseId} />
                 <DeleteLessonButton lessonId={lesson.id} courseId={courseId} />
             </div>

@@ -7,13 +7,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { ArrowRight, UserCircle2, MessageSquare } from 'lucide-react'
 import { ReplyForm } from './reply-form'
-import { UserBadges } from '@/components/user-badges'
+import { UserBadges, type Badge } from '@/components/user-badges'
 
-// التعديل هنا: ضفنا الشارات في الأنواع
 type ProfileWithBadges = {
     full_name: string | null;
     avatar_url: string | null;
-    user_badges: { badges: { id: string; name: string; icon_name: string; color: string } | null }[] | null;
+    user_badges: { badges: Badge | null }[] | null;
 }
 
 type PostWithProfile = {
@@ -37,7 +36,6 @@ export default async function PostDetailsPage({ params }: { params: Promise<{ id
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
 
-    // جلب الموضوع مع شارات صاحبه
     const { data: postData } = await supabase
         .from('forum_posts')
         .select(`
@@ -45,7 +43,7 @@ export default async function PostDetailsPage({ params }: { params: Promise<{ id
       profiles (
         full_name, 
         avatar_url,
-        user_badges ( badges (id, name, icon_name, color) )
+        user_badges ( badges (id, name, description, icon_name, color) )
       )
     `)
         .eq('id', id)
@@ -54,7 +52,6 @@ export default async function PostDetailsPage({ params }: { params: Promise<{ id
     if (!postData) notFound()
     const post = postData as unknown as PostWithProfile
 
-    // جلب الردود مع شارات أصحابها
     const { data: repliesData } = await supabase
         .from('forum_replies')
         .select(`
@@ -62,7 +59,7 @@ export default async function PostDetailsPage({ params }: { params: Promise<{ id
       profiles (
         full_name, 
         avatar_url,
-        user_badges ( badges (id, name, icon_name, color) )
+        user_badges ( badges (id, name, description, icon_name, color) )
       )
     `)
         .eq('post_id', id)
@@ -71,8 +68,7 @@ export default async function PostDetailsPage({ params }: { params: Promise<{ id
     const replies = (repliesData as unknown as ReplyWithProfile[]) || []
     const blurDataURL = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=";
 
-    // تجهيز شارات صاحب الموضوع
-    const postUserBadges = post.profiles?.user_badges?.map(ub => ub.badges).filter(b => b !== null) || []
+    const postUserBadges = post.profiles?.user_badges?.map(ub => ub.badges).filter((b): b is Badge => b !== null) || []
 
     return (
         <div className="container mx-auto px-4 md:px-6 lg:px-8 py-8 max-w-4xl relative">
@@ -100,9 +96,8 @@ export default async function PostDetailsPage({ params }: { params: Promise<{ id
                         )}
                         <span className="font-semibold text-slate-200">{post.profiles?.full_name || 'طالب'}</span>
 
-                        {/* شارات صاحب الموضوع */}
                         {postUserBadges.length > 0 && (
-                            <UserBadges badges={postUserBadges as any} size="sm" />
+                            <UserBadges badges={postUserBadges} size="sm" />
                         )}
 
                         <span className="mr-2">•</span>
@@ -137,8 +132,7 @@ export default async function PostDetailsPage({ params }: { params: Promise<{ id
                 <div className="space-y-4 mt-6">
                     {replies.length > 0 ? (
                         replies.map((reply) => {
-                            // تجهيز شارات صاحب الرد
-                            const replyUserBadges = reply.profiles?.user_badges?.map(ub => ub.badges).filter(b => b !== null) || []
+                            const replyUserBadges = reply.profiles?.user_badges?.map(ub => ub.badges).filter((b): b is Badge => b !== null) || []
 
                             return (
                                 <div key={reply.id} className="p-5 bg-white/[0.02] border border-white/5 rounded-2xl shadow-sm">
@@ -152,9 +146,8 @@ export default async function PostDetailsPage({ params }: { params: Promise<{ id
                                         )}
                                         <span className="font-semibold text-sm text-slate-200">{reply.profiles?.full_name || 'طالب'}</span>
 
-                                        {/* شارات صاحب الرد */}
                                         {replyUserBadges.length > 0 && (
-                                            <UserBadges badges={replyUserBadges as any} size="sm" />
+                                            <UserBadges badges={replyUserBadges} size="sm" />
                                         )}
 
                                         <span className="text-xs text-slate-500 mr-auto">

@@ -18,7 +18,7 @@ export async function createQuizAction(_prevState: { error?: string; success?: s
 
     const courseId = formData.get('courseId') as string
     const title = formData.get('title') as string
-    const durationMinutes = Number(formData.get('duration_minutes')) || 0 // <-- ضفنا الوقت
+    const durationMinutes = Number(formData.get('duration_minutes')) || 0
     const questionsJson = formData.get('questions') as string
 
     if (!title || title.trim().length < 3) {
@@ -28,7 +28,7 @@ export async function createQuizAction(_prevState: { error?: string; success?: s
     let questions: QuestionData[] = []
     try {
         questions = JSON.parse(questionsJson)
-    } catch (e) {
+    } catch {
         return { error: 'حدث خطأ في قراءة الأسئلة' }
     }
 
@@ -36,7 +36,6 @@ export async function createQuizAction(_prevState: { error?: string; success?: s
         return { error: 'يجب إضافة سؤال واحد على الأقل' }
     }
 
-    // التأكد إن الكورس بتاع المدرس ده
     const { data: course } = await supabase.from('courses').select('instructor_id').eq('id', courseId).single()
     if (course?.instructor_id !== user.id) return { error: 'غير مصرح لك' }
 
@@ -47,7 +46,7 @@ export async function createQuizAction(_prevState: { error?: string; success?: s
             course_id: courseId,
             instructor_id: user.id,
             title: title.trim(),
-            duration_minutes: durationMinutes // <-- حفظنا الوقت هنا
+            duration_minutes: durationMinutes
         })
         .select('id')
         .single()
@@ -59,12 +58,28 @@ export async function createQuizAction(_prevState: { error?: string; success?: s
         quiz_id: quiz.id,
         question_text: q.text,
         options: q.options,
-        correct_option_index: q.correctIndex
+        position: 1
     }))
 
-    const { error: questionsError } = await supabase.from('questions').insert(questionsToInsert)
+    // إضافة الإجابات في الجدول الجديد
+    const { data: insertedQuestions, error: questionsError } = await supabase
+        .from('questions')
+        .insert(questionsToInsert)
+        .select('id')
 
-    if (questionsError) return { error: 'حدث خطأ أثناء حفظ الأسئلة' }
+    if (questionsError || !insertedQuestions) return { error: 'حدث خطأ أثناء حفظ الأسئلة' }
+
+    // ربط الإجابات الصحيحة بالأسئلة اللي اتسجلت
+    const answersToInsert = insertedQuestions.map((q, index) => ({
+        question_id: q.id,
+        correct_option_index: questions[index].correctIndex
+    }))
+
+    const { error: answersError } = await supabase
+        .from('question_answers')
+        .insert(answersToInsert)
+
+    if (answersError) return { error: 'حدث خطأ أثناء حفظ الإجابات الصحيحة' }
 
     revalidatePath(`/dashboard/courses/${courseId}/quizzes`)
     redirect(`/dashboard/courses/${courseId}/quizzes`)

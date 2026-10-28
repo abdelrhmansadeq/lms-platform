@@ -8,7 +8,6 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { toast } from 'sonner'
-import { ImagePlus } from 'lucide-react'
 
 type ProfileData = {
     full_name: string | null;
@@ -29,7 +28,6 @@ export function ProfileForm({ profile }: { profile: ProfileData }) {
     return (
         <form action={formAction} className="space-y-6">
 
-            {/* عرض الصورة الشخصية */}
             <div className="flex flex-col items-center gap-4 mb-6">
                 {profile.avatar_url ? (
                     <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-emerald-500/20 shadow-[0_0_20px_-5px_rgba(16,185,129,0.3)]">
@@ -70,7 +68,7 @@ export function ProfileForm({ profile }: { profile: ProfileData }) {
             <div className="space-y-2">
                 <Label className="text-slate-300">نوع الحساب</Label>
                 <Input
-                    value={profile.role === 'instructor' ? 'مدرس' : 'طالب'}
+                    value={profile.role === 'instructor' ? 'مدرس' : profile.role === 'admin' ? 'أدمن' : 'طالب'}
                     disabled
                     className="bg-black/40 border-white/5 text-slate-500 cursor-not-allowed h-11"
                 />

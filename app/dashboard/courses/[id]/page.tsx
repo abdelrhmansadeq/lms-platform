@@ -10,6 +10,16 @@ import { DeleteCourseButton } from './delete-buttons'
 import { SortableLessonsList } from './sortable-lessons'
 import { BookOpen, FileQuestion, Edit, ClipboardList } from 'lucide-react'
 
+// التعديل هنا: تعريف نوع للمرفقات عشان نمنع any
+type AttachmentData = {
+    id: string;
+    lesson_id: string;
+    title: string | null;
+    file_name: string;
+    file_path: string;
+    file_type: string;
+}
+
 export default async function CourseManagePage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = await params;
     const supabase = await createClient()
@@ -32,7 +42,7 @@ export default async function CourseManagePage({ params }: { params: Promise<{ i
         .eq('course_id', course.id)
         .order('position', { ascending: true })
 
-    let allAttachments: any[] = []
+    let allAttachments: AttachmentData[] = []
     if (lessons && lessons.length > 0) {
         const lessonIds = lessons.map(l => l.id)
         const { data: attachments } = await supabase
@@ -40,7 +50,7 @@ export default async function CourseManagePage({ params }: { params: Promise<{ i
             .select('*')
             .in('lesson_id', lessonIds)
 
-        if (attachments) allAttachments = attachments
+        if (attachments) allAttachments = attachments as AttachmentData[]
     }
 
     const { data: activationCodes } = await supabase
@@ -52,14 +62,12 @@ export default async function CourseManagePage({ params }: { params: Promise<{ i
     return (
         <div className="space-y-8 relative">
 
-            {/* Glow */}
             <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-[800px] h-[300px] bg-emerald-500/10 blur-[120px] rounded-full pointer-events-none -z-10" />
 
-            {/* رأس الصفحة */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white/[0.02] border border-white/5 p-6 rounded-3xl backdrop-blur-sm animate-fade-up">
                 <div>
                     <h2 className="text-2xl font-bold text-white mb-2">{course.title}</h2>
-                    <p className="text-slate-400 text-sm">{course.description}</p>
+                    <p className="text-slate-400 text-sm">{course.description?.replace(/<[^>]*>?/gm, '')}</p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
           <span className={`text-xs px-3 py-1.5 rounded-full font-bold border ${course.is_published ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20'}`}>
@@ -78,7 +86,6 @@ export default async function CourseManagePage({ params }: { params: Promise<{ i
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {/* قائمة الدروس */}
                 <div className="lg:col-span-2 space-y-4 animate-fade-up delay-100">
                     <div className="flex justify-between items-center border-b border-white/5 pb-4">
                         <h3 className="text-xl font-bold text-white flex items-center gap-2">
@@ -93,14 +100,13 @@ export default async function CourseManagePage({ params }: { params: Promise<{ i
                         </div>
                     ) : (
                         <SortableLessonsList
-                            initialLessons={lessons as any || []}
+                            initialLessons={lessons || []}
                             courseId={course.id}
-                            allAttachments={allAttachments as any || []}
+                            allAttachments={allAttachments}
                         />
                     )}
                 </div>
 
-                {/* العمود الجانبي */}
                 <div className="space-y-6 animate-fade-up delay-200">
                     <Card className="bg-white/[0.02] border-white/5 shadow-sm rounded-3xl">
                         <CardHeader>
