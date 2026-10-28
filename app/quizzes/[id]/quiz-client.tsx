@@ -5,9 +5,10 @@ import { submitQuizAction } from './actions'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { toast } from 'sonner'
-import { CheckCircle2, Award, AlertCircle, RotateCcw, Flag, Check, Clock, ShieldAlert } from 'lucide-react'
+import { CheckCircle2, Award, AlertCircle, RotateCcw, Flag, Check, Clock } from 'lucide-react'
 import Link from 'next/link'
 import { Progress } from '@/components/ui/progress'
+import { useRouter } from 'next/navigation'
 
 type Question = {
     id: string
@@ -20,27 +21,39 @@ export function QuizClient({
                                quizTitle,
                                courseSlug,
                                questions,
-                               durationMinutes
+                               durationMinutes,
+                               attemptId,
+                               startedAt
                            }: {
     quizId: string,
     quizTitle: string,
     courseSlug: string,
     questions: Question[],
-    durationMinutes: number
+    durationMinutes: number,
+    attemptId: string,
+    startedAt: string
 }) {
     const [answers, setAnswers] = useState<Record<string, number>>({})
     const [flagged, setFlagged] = useState<Set<string>>(new Set())
     const [isPending, setIsPending] = useState(false)
     const [result, setResult] = useState<{ score: number, totalQuestions: number, percentage: number } | null>(null)
+    const router = useRouter()
 
-    // حالة العداد (بالثواني)
-    const [timeLeft, setTimeLeft] = useState(durationMinutes * 60)
+    // حساب الوقت المتبقي بناءً على وقت البدء
+    const calculateTimeLeft = useCallback(() => {
+        if (durationMinutes === 0) return 0
+        const start = new Date(startedAt).getTime()
+        const now = new Date().getTime()
+        const elapsedSeconds = Math.floor((now - start) / 1000)
+        const totalSeconds = durationMinutes * 60
+        return Math.max(0, totalSeconds - elapsedSeconds)
+    }, [durationMinutes, startedAt])
 
-    // دالة التسليم (بتقبل باراميتر عشان نعرف لو ده تسليم تلقائي)
+    const [timeLeft, setTimeLeft] = useState(calculateTimeLeft())
+
     const handleSubmit = useCallback(async (isAutoSubmit = false) => {
         if (isPending || result) return;
 
-        // لو تسليم يدوي وفيه أسئلة مش مجاوبة
         if (!isAutoSubmit && Object.keys(answers).length !== questions.length) {
             toast.error('يرجى الإجابة على جميع الأسئلة قبل التسليم')
             return
@@ -52,7 +65,7 @@ export function QuizClient({
             selectedOption: answers[qId]
         }))
 
-        const res = await submitQuizAction(quizId, formattedAnswers)
+        const res = await submitQuizAction(attemptId, quizId, formattedAnswers)
 
         if (res.error) {
             toast.error(res.error)
@@ -70,27 +83,30 @@ export function QuizClient({
             }
             window.scrollTo({ top: 0, behavior: 'smooth' })
         }
-    }, [isPending, result, answers, questions.length, quizId])
+    }, [isPending, result, answers, questions.length, quizId, attemptId])
 
-    // منطق العداد التنازلي
     useEffect(() => {
-        if (durationMinutes === 0 || result) return // لو مفيش وقت أو الاختبار خلص، العداد يقف
+        // تحديث العداد كل ثانية
+        if (durationMinutes === 0 || result) return
 
         const timer = setInterval(() => {
-            setTimeLeft((prev) => {
-                if (prev <= 1) {
-                    clearInterval(timer)
-                    handleSubmit(true) // التسليم التلقائي لما الوقت يخلص
-                    return 0
-                }
-                return prev - 1
-            })
+            const remaining = calculateTimeLeft()
+            setTimeLeft(remaining)
+
+            if (remaining <= 0) {
+                clearInterval(timer)
+                handleSubmit(true)
+            }
         }, 1000)
 
-        return () => clearInterval(timer)
-    }, [durationMinutes, result, handleSubmit])
+        // فحص أولي لو الوقت خلص فوراً
+        if (timeLeft <= 0) {
+            handleSubmit(true)
+        }
 
-    // تنسيق الوقت (مثلاً 09:45)
+        return () => clearInterval(timer)
+    }, [durationMinutes, result, handleSubmit, calculateTimeLeft, timeLeft])
+
     const formatTime = (seconds: number) => {
         const m = Math.floor(seconds / 60)
         const s = seconds % 60
@@ -100,11 +116,8 @@ export function QuizClient({
     const handleSelectOption = (questionId: string, optionIndex: number) => {
         setAnswers(prev => {
             const newAnswers = { ...prev }
-            if (newAnswers[questionId] === optionIndex) {
-                delete newAnswers[questionId]
-            } else {
-                newAnswers[questionId] = optionIndex
-            }
+            if (newAnswers[questionId] === optionIndex) delete newAnswers[questionId]
+            else newAnswers[questionId] = optionIndex
             return newAnswers
         })
     }
@@ -128,10 +141,7 @@ export function QuizClient({
     }
 
     const handleRetake = () => {
-        setAnswers({})
-        setFlagged(new Set())
-        setResult(null)
-        setTimeLeft(durationMinutes * 60) // إعادة ضبط العداد
+        window.location.reload() // إعادة تحميل عشان نبدأ محاولة جديدة
     }
 
     const answeredCount = Object.keys(answers).length
@@ -161,7 +171,7 @@ export function QuizClient({
 
                     <div className="flex flex-col gap-3 pt-4">
                         <Button onClick={handleRetake} variant="outline" className="w-full h-12 text-lg gap-2 bg-transparent border-white/20 text-white hover:bg-white/10 hover:text-white">
-                            <RotateCcw className="w-5 h-5" /> إعادة الاختبار
+                            <RotateCcw className="w-5 h-5" /> العودة لصفحة الاختبار
                         </Button>
                         <Link href={`/courses/${courseSlug}`}>
                             <Button size="lg" className="w-full h-12 text-lg bg-emerald-500 hover:bg-emerald-400 text-black font-bold">العودة للكورس</Button>
@@ -179,7 +189,6 @@ export function QuizClient({
                 <div className="flex justify-between items-start mb-4">
                     <h1 className="text-2xl font-bold text-white">{quizTitle}</h1>
 
-                    {/* عداد الوقت */}
                     {durationMinutes > 0 && (
                         <div className={`flex items-center gap-2 px-4 py-2 rounded-xl border font-mono text-xl font-bold ${timeLeft < 60 ? 'bg-red-500/20 border-red-500/30 text-red-400 animate-pulse' : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'}`} dir="ltr">
                             <Clock className="w-5 h-5" />

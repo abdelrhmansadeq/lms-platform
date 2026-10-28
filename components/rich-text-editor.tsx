@@ -8,7 +8,7 @@ import { Button } from './ui/button'
 export function RichTextEditor({
                                    content,
                                    onChange,
-                                   name = 'content' // القيمة الافتراضية
+                                   name = 'content'
                                }: {
     content: string;
     onChange: (html: string) => void;
@@ -31,14 +31,14 @@ export function RichTextEditor({
 
     return (
         <div className="border border-white/10 rounded-xl overflow-hidden bg-black/20 focus-within:ring-2 focus-within:ring-emerald-500 transition-all">
-            {/* شريط الأدوات */}
-            <div className="bg-white/5 border-b border-white/10 p-2 flex flex-wrap gap-1 items-center">
+            {/* شريط الأدوات (بقى بيتسحب على الموبايل) */}
+            <div className="bg-white/5 border-b border-white/10 p-2 flex gap-1 items-center overflow-x-auto scrollbar-hide whitespace-nowrap">
                 <Button
                     type="button"
                     variant="ghost"
                     size="icon"
                     onClick={() => editor.chain().focus().toggleBold().run()}
-                    className={`h-8 w-8 ${editor.isActive('bold') ? 'bg-emerald-500/20 text-emerald-400' : 'text-slate-400 hover:text-white'}`}
+                    className={`h-8 w-8 shrink-0 ${editor.isActive('bold') ? 'bg-emerald-500/20 text-emerald-400' : 'text-slate-400 hover:text-white'}`}
                 >
                     <Bold className="w-4 h-4" />
                 </Button>
@@ -47,7 +47,7 @@ export function RichTextEditor({
                     variant="ghost"
                     size="icon"
                     onClick={() => editor.chain().focus().toggleItalic().run()}
-                    className={`h-8 w-8 ${editor.isActive('italic') ? 'bg-emerald-500/20 text-emerald-400' : 'text-slate-400 hover:text-white'}`}
+                    className={`h-8 w-8 shrink-0 ${editor.isActive('italic') ? 'bg-emerald-500/20 text-emerald-400' : 'text-slate-400 hover:text-white'}`}
                 >
                     <Italic className="w-4 h-4" />
                 </Button>
@@ -56,17 +56,17 @@ export function RichTextEditor({
                     variant="ghost"
                     size="icon"
                     onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
-                    className={`h-8 w-8 ${editor.isActive('heading', { level: 2 }) ? 'bg-emerald-500/20 text-emerald-400' : 'text-slate-400 hover:text-white'}`}
+                    className={`h-8 w-8 shrink-0 ${editor.isActive('heading', { level: 2 }) ? 'bg-emerald-500/20 text-emerald-400' : 'text-slate-400 hover:text-white'}`}
                 >
                     <Heading2 className="w-4 h-4" />
                 </Button>
-                <div className="w-px h-6 bg-white/10 mx-1" />
+                <div className="w-px h-6 bg-white/10 mx-1 shrink-0" />
                 <Button
                     type="button"
                     variant="ghost"
                     size="icon"
                     onClick={() => editor.chain().focus().toggleBulletList().run()}
-                    className={`h-8 w-8 ${editor.isActive('bulletList') ? 'bg-emerald-500/20 text-emerald-400' : 'text-slate-400 hover:text-white'}`}
+                    className={`h-8 w-8 shrink-0 ${editor.isActive('bulletList') ? 'bg-emerald-500/20 text-emerald-400' : 'text-slate-400 hover:text-white'}`}
                 >
                     <List className="w-4 h-4" />
                 </Button>
@@ -75,7 +75,7 @@ export function RichTextEditor({
                     variant="ghost"
                     size="icon"
                     onClick={() => editor.chain().focus().toggleOrderedList().run()}
-                    className={`h-8 w-8 ${editor.isActive('orderedList') ? 'bg-emerald-500/20 text-emerald-400' : 'text-slate-400 hover:text-white'}`}
+                    className={`h-8 w-8 shrink-0 ${editor.isActive('orderedList') ? 'bg-emerald-500/20 text-emerald-400' : 'text-slate-400 hover:text-white'}`}
                 >
                     <ListOrdered className="w-4 h-4" />
                 </Button>
@@ -86,7 +86,7 @@ export function RichTextEditor({
                     size="icon"
                     onClick={() => editor.chain().focus().undo().run()}
                     disabled={!editor.can().undo()}
-                    className="h-8 w-8 text-slate-400 hover:text-white"
+                    className="h-8 w-8 shrink-0 text-slate-400 hover:text-white"
                 >
                     <Undo className="w-4 h-4" />
                 </Button>
@@ -96,7 +96,7 @@ export function RichTextEditor({
                     size="icon"
                     onClick={() => editor.chain().focus().redo().run()}
                     disabled={!editor.can().redo()}
-                    className="h-8 w-8 text-slate-400 hover:text-white"
+                    className="h-8 w-8 shrink-0 text-slate-400 hover:text-white"
                 >
                     <Redo className="w-4 h-4" />
                 </Button>

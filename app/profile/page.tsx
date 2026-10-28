@@ -1,10 +1,12 @@
 /* eslint-disable @next/next/no-img-element */
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import Link from 'next/link'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { ProfileForm } from './profile-form'
-import { UserCircle2, Award } from 'lucide-react'
+import { UserCircle2, Award, Trophy } from 'lucide-react'
 import { UserBadges } from '@/components/user-badges'
+import { Button } from '@/components/ui/button'
 
 export default async function ProfilePage() {
     const supabase = await createClient()
@@ -62,6 +64,15 @@ export default async function ProfilePage() {
                         </div>
                     )}
                 </CardHeader>
+
+                {/* زرار سجل النتائج الجديد */}
+                <div className="flex justify-center py-4 border-b border-white/5 bg-white/[0.01]">
+                    <Link href="/my-results">
+                        <Button variant="outline" className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500 hover:text-black gap-2 transition-all">
+                            <Trophy className="w-4 h-4" /> سجل نتائج الاختبارات
+                        </Button>
+                    </Link>
+                </div>
 
                 <CardContent className="p-8">
                     <ProfileForm

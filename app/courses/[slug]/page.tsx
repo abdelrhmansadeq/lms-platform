@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import Link from 'next/link'
 import { EnrollForm } from './enroll-form'
+import { FreeEnrollButton } from './free-enroll-button' // <--- ضفنا ده
 import { ReviewForm } from './review-form'
 import { StarRating } from '@/components/star-rating'
 import { CheckCircle2, Lock, PlayCircle, UserCircle2, FileQuestion, ArrowLeft, BookOpen, Clock } from 'lucide-react'
@@ -117,7 +118,7 @@ export default async function CourseDetailsPage({ params }: { params: Promise<{ 
 
     const blurDataURL = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=";
 
-    // 🌟 تجهيز كود الـ JSON-LD لجوجل
+    // تجهيز كود الـ JSON-LD لجوجل
     const jsonLd = {
         '@context': 'https://schema.org',
         '@type': 'Course',
@@ -145,7 +146,6 @@ export default async function CourseDetailsPage({ params }: { params: Promise<{ 
         }
     };
 
-    // لو فيه تقييمات، بنضيفها للكود
     if (reviewsCount > 0) {
         Object.assign(jsonLd, {
             aggregateRating: {
@@ -161,7 +161,6 @@ export default async function CourseDetailsPage({ params }: { params: Promise<{ 
     return (
         <div className="container mx-auto px-4 md:px-6 lg:px-8 py-8 max-w-6xl relative">
 
-            {/* 🌟 حقن كود JSON-LD في الصفحة */}
             <script
                 type="application/ld+json"
                 dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
@@ -176,7 +175,7 @@ export default async function CourseDetailsPage({ params }: { params: Promise<{ 
                     {course.thumbnail_url && (
                         <div className="w-full h-64 md:h-[400px] rounded-3xl overflow-hidden border border-white/10 shadow-2xl relative bg-slate-800 group">
                             <Image src={course.thumbnail_url} alt={course.title} fill priority placeholder="blur" blurDataURL={blurDataURL} className="object-cover group-hover:scale-105 transition-transform duration-700" />
-                            <div className="absolute inset-0 bg-gradient-to-t from-[#0B0F17] via-[#0B0F17]/40 to-transparent" />
+                            <div className="absolute inset-0 bg-linear-to-t from-[#0B0F17] via-[#0B0F17]/40 to-transparent" />
                             <div className="absolute bottom-6 right-6 left-6">
                                 <h1 className="text-3xl md:text-5xl font-bold text-white mb-4 leading-tight tracking-tight">{course.title}</h1>
                                 <div className="flex flex-wrap items-center gap-4">
@@ -314,7 +313,7 @@ export default async function CourseDetailsPage({ params }: { params: Promise<{ 
                 <div className="animate-fade-up delay-200">
                     <div className="sticky top-24">
                         <Card className="relative bg-white/5 backdrop-blur-xl border border-white/10 shadow-2xl rounded-3xl overflow-hidden">
-                            <div className="bg-gradient-to-b from-emerald-500/10 to-transparent p-8 text-center border-b border-white/5">
+                            <div className="bg-linear-to-b from-emerald-500/10 to-transparent p-8 text-center border-b border-white/5">
                                 <p className="text-sm font-medium text-slate-400 mb-2">سعر الكورس</p>
                                 <CardTitle className="text-5xl font-extrabold text-white tracking-tight">
                                     {course.price === 0 ? 'مجاني' : `${course.price}`}
@@ -334,6 +333,12 @@ export default async function CourseDetailsPage({ params }: { params: Promise<{ 
                                             <CheckCircle2 className="w-5 h-5" /> أنت مشترك في هذا الكورس
                                         </div>
                                         <Button className="w-full h-12 text-lg bg-white/5 border border-white/10 text-white hover:bg-white/10" disabled>أنت مشترك بالفعل</Button>
+                                    </div>
+                                ) : course.price === 0 ? (
+                                    // التعديل هنا: لو الكورس مجاني يظهر زرار الاشتراك المباشر
+                                    <div className="space-y-4">
+                                        <p className="text-sm text-slate-400 text-center mb-4">هذا الكورس مجاني بالكامل. انضم الآن!</p>
+                                        <FreeEnrollButton courseId={course.id} />
                                     </div>
                                 ) : (
                                     <div className="space-y-4">

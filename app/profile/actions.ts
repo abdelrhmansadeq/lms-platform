@@ -17,7 +17,6 @@ export async function updateProfileAction(_prevState: { error?: string; success?
         return { error: 'الاسم مطلوب (3 أحرف على الأقل)' }
     }
 
-    // جلب الصورة القديمة عشان نحافظ عليها لو مفيش صورة جديدة
     const { data: currentProfile } = await supabase
         .from('profiles')
         .select('avatar_url')
@@ -26,7 +25,6 @@ export async function updateProfileAction(_prevState: { error?: string; success?
 
     let newAvatarUrl = currentProfile?.avatar_url || null
 
-    // لو المستخدم رفع صورة جديدة
     if (avatarFile && avatarFile.size > 0) {
         const fileExt = avatarFile.name.split('.').pop()
         const fileName = `${user.id}-${Date.now()}.${fileExt}`
@@ -38,6 +36,14 @@ export async function updateProfileAction(_prevState: { error?: string; success?
         if (!uploadError) {
             const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(fileName)
             newAvatarUrl = urlData.publicUrl
+
+            // 🛡️ مسح الصورة القديمة
+            if (currentProfile?.avatar_url) {
+                const oldFileName = currentProfile.avatar_url.split('/').pop()
+                if (oldFileName) {
+                    await supabase.storage.from('avatars').remove([oldFileName])
+                }
+            }
         } else {
             return { error: 'حدث خطأ أثناء رفع الصورة' }
         }

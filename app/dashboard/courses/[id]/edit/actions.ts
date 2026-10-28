@@ -20,7 +20,7 @@ export async function updateCourseAction(_prevState: { error?: string; success?:
         return { error: 'عنوان الكورس مطلوب (3 أحرف على الأقل)' }
     }
 
-    // 1. جلب بيانات الكورس الحالية عشان نحافظ على الصورة القديمة لو مفيش صورة جديدة
+    // جلب الصورة القديمة
     const { data: currentCourse } = await supabase
         .from('courses')
         .select('thumbnail_url')
@@ -29,8 +29,12 @@ export async function updateCourseAction(_prevState: { error?: string; success?:
 
     let newThumbnailUrl = currentCourse?.thumbnail_url || null
 
-    // 2. لو المدرس رفع صورة جديدة
     if (thumbnailFile && thumbnailFile.size > 0) {
+        // التحقق من نوع الملف
+        if (!thumbnailFile.type.startsWith('image/')) {
+            return { error: 'غير مسموح برفع هذا النوع من الملفات. يرجى رفع صورة فقط.' }
+        }
+
         const fileExt = thumbnailFile.name.split('.').pop()
         const fileName = `${user.id}-${Date.now()}.${fileExt}`
 
@@ -41,12 +45,19 @@ export async function updateCourseAction(_prevState: { error?: string; success?:
         if (!uploadError) {
             const { data: urlData } = supabase.storage.from('thumbnails').getPublicUrl(fileName)
             newThumbnailUrl = urlData.publicUrl
+
+            // 🛡️ مسح الصورة القديمة عشان مناخدش مساحة على الفاضي
+            if (currentCourse?.thumbnail_url) {
+                const oldFileName = currentCourse.thumbnail_url.split('/').pop()
+                if (oldFileName) {
+                    await supabase.storage.from('thumbnails').remove([oldFileName])
+                }
+            }
         } else {
             return { error: 'حدث خطأ أثناء رفع الصورة الجديدة.' }
         }
     }
 
-    // 3. تحديث الكورس
     const { error } = await supabase
         .from('courses')
         .update({

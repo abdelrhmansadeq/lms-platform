@@ -62,3 +62,37 @@ export async function submitReviewAction(_prevState: { error?: string; success?:
     revalidatePath(`/courses/[slug]`, 'page')
     return { success: 'تم حفظ تقييمك بنجاح. شكراً لك!' }
 }
+
+
+
+
+// 4. الاشتراك في كورس مجاني (بدون كود)
+export async function enrollFreeCourseAction(courseId: string) {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) return { error: 'يجب تسجيل الدخول أولاً' }
+
+    // التأكد إن الكورس مجاني فعلاً
+    const { data: course } = await supabase.from('courses').select('price').eq('id', courseId).single()
+    if (!course || Number(course.price) > 0) {
+        return { error: 'هذا الكورس غير مجاني، يرجى استخدام كود التفعيل.' }
+    }
+
+    // إضافة الطالب في جدول الاشتراكات
+    const { error } = await supabase.from('enrollments').insert({
+        student_id: user.id,
+        course_id: courseId
+    })
+
+    if (error) {
+        // لو هو مشترك أصلاً
+        if (error.code === '23505') {
+            return { success: 'أنت مشترك بالفعل في هذا الكورس' }
+        }
+        return { error: 'حدث خطأ أثناء الاشتراك، حاول مرة أخرى' }
+    }
+
+    revalidatePath(`/courses/[slug]`, 'page')
+    return { success: 'تم الاشتراك في الكورس بنجاح! استمتع بالتعلم.' }
+}

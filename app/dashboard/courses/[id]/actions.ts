@@ -116,7 +116,6 @@ export async function deleteCourseAction(courseId: string) {
     return { success: 'تم حذف الكورس بنجاح' }
 }
 
-// 5. توليد كود تفعيل
 // 5. توليد أكواد تفعيل (جماعي)
 export async function generateBulkActivationCodesAction(courseId: string, count: number) {
     const supabase = await createClient()
@@ -131,7 +130,6 @@ export async function generateBulkActivationCodesAction(courseId: string, count:
     const { data: course } = await supabase.from('courses').select('instructor_id').eq('id', courseId).single()
     if (course?.instructor_id !== user.id) return { error: 'غير مصرح لك بتوليد أكواد لهذا الكورس' }
 
-    // تجهيز المصفوفة
     const codesToInsert = []
     for (let i = 0; i < count; i++) {
         const randomString = Math.random().toString(36).substring(2, 8).toUpperCase()
@@ -141,7 +139,6 @@ export async function generateBulkActivationCodesAction(courseId: string, count:
         })
     }
 
-    // إدخالهم دفعة واحدة
     const { error } = await supabase.from('activation_codes').insert(codesToInsert)
 
     if (error) return { error: 'حدث خطأ أثناء توليد الأكواد، حاول مرة أخرى' }
@@ -178,7 +175,7 @@ export async function updateLessonAction(_prevState: { error?: string; success?:
     return { success: 'تم تعديل الدرس بنجاح' }
 }
 
-// 7. إضافة مرفق لدرس (مع عنوان)
+// 7. إضافة مرفق لدرس (مع التحقق من النوع)
 export async function addAttachmentAction(_prevState: { error?: string; success?: string } | null, formData: FormData) {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
@@ -192,6 +189,13 @@ export async function addAttachmentAction(_prevState: { error?: string; success?
     if (!title || title.trim().length < 2) return { error: 'يرجى كتابة اسم للمرفق (حرفين على الأقل)' }
     if (!file || file.size === 0) return { error: 'يرجى اختيار ملف أولاً' }
     if (file.size > 10 * 1024 * 1024) return { error: 'حجم الملف يجب أن يكون أقل من 10 ميجابايت' }
+
+    // 🛡️ التحقق من نوع الملف
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf', 'application/zip', 'application/x-rar-compressed', 'text/plain'];
+
+    if (!allowedTypes.includes(file.type)) {
+        return { error: 'نوع الملف غير مدعوم. يرجى رفع صورة، PDF، أو ملف مضغوط.' }
+    }
 
     const { data: course } = await supabase.from('courses').select('instructor_id').eq('id', courseId).single()
     if (course?.instructor_id !== user.id) return { error: 'غير مصرح لك' }
@@ -221,7 +225,7 @@ export async function addAttachmentAction(_prevState: { error?: string; success?
     return { success: 'تم إضافة المرفق بنجاح' }
 }
 
-// 8. حذف مرفق (مع سد ثغرة الأمان IDOR)
+// 8. حذف مرفق (مع مسح الملف من السيرفر)
 export async function deleteAttachmentAction(attachmentId: string, courseId: string) {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
@@ -231,51 +235,31 @@ export async function deleteAttachmentAction(attachmentId: string, courseId: str
     const { data: course } = await supabase.from('courses').select('instructor_id').eq('id', courseId).single()
     if (course?.instructor_id !== user.id) return { error: 'غير مصرح لك' }
 
-    // التأكد إن المرفق ده تابع لدرس في الكورس ده
+    // بنجيب بيانات المرفق الأول عشان نعرف مساره
     const { data: attachment } = await supabase
         .from('lesson_attachments')
-        .select('lesson_id, lessons(course_id)')
+        .select('lesson_id, file_url, lessons(course_id)')
         .eq('id', attachmentId)
         .single()
 
-    // استخراج course_id من العلاقة بأمان بدون استخدام any
     const lessonData = attachment?.lessons as unknown as { course_id: string } | { course_id: string }[] | null;
     const lessonCourseId = Array.isArray(lessonData) ? lessonData[0]?.course_id : lessonData?.course_id;
 
     if (lessonCourseId !== courseId) return { error: 'هذا المرفق لا ينتمي لهذا الكورس' }
 
+    // 🛡️ مسح الملف من الـ Storage الأول
+    if (attachment?.file_url) {
+        const fileName = attachment.file_url.split('/').pop()
+        if (fileName) {
+            await supabase.storage.from('lesson-files').remove([fileName])
+        }
+    }
+
+    // مسح السطر من الداتابيز
     const { error } = await supabase.from('lesson_attachments').delete().eq('id', attachmentId)
 
     if (error) return { error: 'حدث خطأ أثناء حذف المرفق' }
 
     revalidatePath(`/dashboard/courses/${courseId}`)
     return { success: 'تم حذف المرفق بنجاح' }
-}
-
-// حفظ الترتيب الجديد للدروس
-export async function updateLessonOrderAction(courseId: string, updates: { id: string, position: number }[]) {
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return { error: 'غير مصرح' }
-
-    // التأكد إن الكورس بتاع المدرس
-    const { data: course } = await supabase.from('courses').select('instructor_id').eq('id', courseId).single()
-    if (course?.instructor_id !== user.id) return { error: 'غير مصرح لك' }
-
-    // خطوة أمان: عشان الداتابيز فيها Unique على (course_id, position)
-    // لو غيرنا درس من 1 لـ 2، والدرس اللي كان 2 لسه 2، هيضرب إيرور.
-    // عشان كده هنزود 1000 مؤقتاً على كل الأرقام، وبعدين نحط الأرقام النهائية.
-
-    // 1. إزاحة مؤقتة
-    for (const item of updates) {
-        await supabase.from('lessons').update({ position: item.position + 1000 }).eq('id', item.id)
-    }
-
-    // 2. الحفظ النهائي
-    for (const item of updates) {
-        await supabase.from('lessons').update({ position: item.position }).eq('id', item.id)
-    }
-
-    revalidatePath(`/dashboard/courses/${courseId}`)
-    return { success: true }
 }
