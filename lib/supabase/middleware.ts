@@ -27,8 +27,25 @@ export async function updateSession(request: NextRequest) {
         }
     )
 
-    // مهم جدًا: متشيلش الـ await getUser() عشان الجلسة تتحدث صح
-    await supabase.auth.getUser()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    // 🛡️ فحص الحظر: لو فيه مستخدم مسجل دخول، نتأكد إنه مش محظور
+    if (user) {
+        const { data: profile } = await supabase
+            .from('profiles')
+            .select('is_banned')
+            .eq('id', user.id)
+            .single()
+
+        if (profile?.is_banned) {
+            // لو محظور: نمسح الجلسة بتاعته ونطرده لصفحة اللوجين
+            await supabase.auth.signOut()
+            const url = request.nextUrl.clone()
+            url.pathname = '/login'
+            url.searchParams.set('error', 'banned')
+            return NextResponse.redirect(url)
+        }
+    }
 
     return supabaseResponse
 }

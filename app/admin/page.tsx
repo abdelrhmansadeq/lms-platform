@@ -1,6 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Users, GraduationCap, BookOpen, Wallet } from 'lucide-react'
+import { Users, GraduationCap, BookOpen, Wallet, UserCircle2 } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import Link from 'next/link'
 
 export default async function AdminDashboardPage() {
     const supabase = await createClient()
@@ -89,9 +91,15 @@ export default async function AdminDashboardPage() {
 
             <Card className="bg-white/2 border-white/5 shadow-sm rounded-3xl p-8 text-center mt-8">
                 <h2 className="text-2xl font-bold text-white mb-2">أهلاً بك في مركز التحكم</h2>
-                <p className="text-slate-400 max-w-2xl mx-auto">
-                    من هنا يمكنك مراقبة نمو المنصة. في التحديثات القادمة، يمكنك إضافة أدوات لإدارة المستخدمين وحظر الحسابات المخالفة.
+                <p className="text-slate-400 max-w-2xl mx-auto mb-6">
+                    من هنا يمكنك مراقبة نمو المنصة والتحكم في المستخدمين.
                 </p>
+                <Link href="/admin/users">
+                    <Button className="bg-emerald-500 hover:bg-emerald-400 text-black font-bold gap-2">
+                        <UserCircle2 className="w-4 h-4" />
+                        إدارة المستخدمين
+                    </Button>
+                </Link>
             </Card>
 
         </div>
