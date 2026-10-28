@@ -15,7 +15,6 @@ type Note = {
     created_at: string
 }
 
-// دالة بتنسيق الوقت (مثلاً 125 ثانية تبقى 2:05)
 const formatTime = (seconds: number) => {
     const m = Math.floor(seconds / 60)
     const s = Math.floor(seconds % 60)
@@ -26,12 +25,12 @@ export function NotesSection({
                                  lessonId,
                                  initialNotes,
                                  currentTime,
-                                 onSeek
+                                 onSeekAction // <--- الاسم هنا
                              }: {
     lessonId: string;
     initialNotes: Note[];
     currentTime: number;
-    onSeek: (time: number) => void;
+    onSeekAction: (time: number) => void; // <--- الاسم هنا
 }) {
     const [state, formAction, isPending] = useActionState(addLessonNoteAction, null)
     const [isDeleting, setIsDeleting] = useState<string | null>(null)
@@ -67,14 +66,13 @@ export function NotesSection({
 
             <form ref={formRef} action={formAction} className="mb-6 space-y-3">
                 <input type="hidden" name="lessonId" value={lessonId} />
-                {/* بنبعت الوقت الحالي مع الملاحظة */}
                 <input type="hidden" name="timestampSeconds" value={Math.floor(currentTime)} />
 
                 <div className="relative">
                     <Textarea
                         name="content"
                         placeholder={`اكتب ملاحظة عند الدقيقة ${formatTime(currentTime)}...`}
-                        className="min-h-20 bg-black/20 border-white/10 focus-visible:ring-emerald-500 text-white placeholder:text-slate-500 pr-24"
+                        className="min-h-20 bg-black/20 border-white/10 focus-visible:ring-emerald-500 placeholder:text-slate-500 pr-24"
                         required
                     />
                     <div className="absolute left-2 top-2 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold px-2 py-1 rounded-md">
@@ -97,9 +95,8 @@ export function NotesSection({
                 ) : (
                     initialNotes.map((note) => (
                         <div key={note.id} className="flex gap-3 p-4 bg-white/2 border border-white/5 rounded-2xl group">
-                            {/* زرار الانتقال للوقت */}
                             <button
-                                onClick={() => onSeek(note.timestamp_seconds)}
+                                onClick={() => onSeekAction(note.timestamp_seconds)} // <--- الاسم هنا
                                 className="flex flex-col items-center justify-center w-14 h-14 bg-emerald-500/10 border border-emerald-500/20 rounded-xl shrink-0 hover:bg-emerald-500 hover:text-black text-emerald-400 transition-colors cursor-pointer"
                                 title="الانتقال إلى هذه اللحظة"
                             >

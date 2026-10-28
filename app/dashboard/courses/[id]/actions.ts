@@ -231,11 +231,9 @@ export async function deleteAttachmentAction(attachmentId: string, courseId: str
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return { error: 'غير مصرح' }
 
-    // التأكد إن الكورس بتاع المدرس
     const { data: course } = await supabase.from('courses').select('instructor_id').eq('id', courseId).single()
     if (course?.instructor_id !== user.id) return { error: 'غير مصرح لك' }
 
-    // بنجيب بيانات المرفق الأول عشان نعرف مساره
     const { data: attachment } = await supabase
         .from('lesson_attachments')
         .select('lesson_id, file_url, lessons(course_id)')
@@ -247,7 +245,6 @@ export async function deleteAttachmentAction(attachmentId: string, courseId: str
 
     if (lessonCourseId !== courseId) return { error: 'هذا المرفق لا ينتمي لهذا الكورس' }
 
-    // 🛡️ مسح الملف من الـ Storage الأول
     if (attachment?.file_url) {
         const fileName = attachment.file_url.split('/').pop()
         if (fileName) {
@@ -255,11 +252,31 @@ export async function deleteAttachmentAction(attachmentId: string, courseId: str
         }
     }
 
-    // مسح السطر من الداتابيز
     const { error } = await supabase.from('lesson_attachments').delete().eq('id', attachmentId)
 
     if (error) return { error: 'حدث خطأ أثناء حذف المرفق' }
 
     revalidatePath(`/dashboard/courses/${courseId}`)
     return { success: 'تم حذف المرفق بنجاح' }
+}
+
+// 9. تحديث ترتيب الدروس (Drag & Drop) - الدالة اللي كانت ناقصة
+export async function updateLessonOrderAction(courseId: string, updates: { id: string, position: number }[]) {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { error: 'غير مصرح' }
+
+    const { data: course } = await supabase.from('courses').select('instructor_id').eq('id', courseId).single()
+    if (course?.instructor_id !== user.id) return { error: 'غير مصرح لك' }
+
+    for (const item of updates) {
+        await supabase.from('lessons').update({ position: item.position + 1000 }).eq('id', item.id)
+    }
+
+    for (const item of updates) {
+        await supabase.from('lessons').update({ position: item.position }).eq('id', item.id)
+    }
+
+    revalidatePath(`/dashboard/courses/${courseId}`)
+    return { success: true }
 }

@@ -5,7 +5,11 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { MessageSquare, Plus, UserCircle2, ChevronRight, ChevronLeft, Search } from 'lucide-react'
-import { UserBadges } from '@/components/user-badges'
+import { UserBadges, type Badge } from '@/components/user-badges' // <--- استوردنا النوع هنا
+
+type UserBadgeJoin = {
+    badges: Badge | null;
+}
 
 type ForumPost = {
     id: string;
@@ -15,7 +19,7 @@ type ForumPost = {
     profiles: {
         full_name: string | null;
         avatar_url: string | null;
-        user_badges: { badges: { id: string; name: string; icon_name: string; color: string } | null }[] | null;
+        user_badges: UserBadgeJoin[] | null;
     } | null;
     forum_replies: { id: string }[] | null;
 }
@@ -33,7 +37,6 @@ export default async function ForumPage({
     const itemsPerPage = 6
     const offset = (currentPage - 1) * itemsPerPage
 
-    // بناء الاستعلام مع البحث
     let query = supabase
         .from('forum_posts')
         .select(`
@@ -46,7 +49,6 @@ export default async function ForumPage({
       forum_replies (id)
     `, { count: 'exact' })
 
-    // فلترة البحث
     if (searchQuery) {
         query = query.or(`title.ilike.%${searchQuery}%,content.ilike.%${searchQuery}%`)
     }
@@ -79,7 +81,7 @@ export default async function ForumPage({
                 </Link>
             </div>
 
-            {/* شريط البحث الجديد */}
+            {/* شريط البحث */}
             <div className="max-w-2xl mb-8 animate-fade-up delay-100">
                 <form method="GET" action="/forum" className="relative flex items-center gap-2 bg-white/5 backdrop-blur-xl p-2 rounded-2xl border border-white/10 shadow-2xl">
                     <div className="relative flex-1">
@@ -88,7 +90,7 @@ export default async function ForumPage({
                             name="q"
                             defaultValue={searchQuery}
                             placeholder="ابحث عن موضوع أو سؤال..."
-                            className="pr-12 h-12 text-lg rounded-xl bg-transparent border-0 focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-slate-500 text-white"
+                            className="pr-12 h-12 text-lg rounded-xl bg-transparent border-0 focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-slate-500"
                         />
                     </div>
                     <Button type="submit" size="lg" className="h-12 rounded-xl px-8 bg-emerald-500 hover:bg-emerald-400 text-black font-bold transition-all shadow-[0_0_20px_-5px_rgba(16,185,129,0.6)]">
@@ -118,7 +120,9 @@ export default async function ForumPage({
                 <>
                     <div className="grid gap-4">
                         {posts.map((post, index) => {
-                            const userBadges = post.profiles?.user_badges?.map(ub => ub.badges).filter(b => b !== null) || []
+                            const userBadges = post.profiles?.user_badges
+                                ?.map(ub => ub.badges)
+                                .filter((b): b is Badge => b !== null) || []
 
                             return (
                                 <Link href={`/forum/${post.id}`} key={post.id}>
@@ -151,7 +155,7 @@ export default async function ForumPage({
 
                                                     {userBadges.length > 0 && (
                                                         <div className="mr-2">
-                                                            <UserBadges badges={userBadges as any} size="sm" />
+                                                            <UserBadges badges={userBadges} size="sm" />
                                                         </div>
                                                     )}
 

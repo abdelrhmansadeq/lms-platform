@@ -20,18 +20,17 @@ export function ReviewForm({ courseId, existingReview }: { courseId: string, exi
     }, [state])
 
     return (
-        <form action={formAction} className="space-y-4 bg-muted/30 p-4 rounded-xl border border-border">
+        <form action={formAction} className="space-y-4 bg-white/[0.02] p-4 rounded-xl border border-white/5">
             <input type="hidden" name="courseId" value={courseId} />
-            {/* بنبعت التقييم كـ hidden input عشان يروح مع الفورم */}
             <input type="hidden" name="rating" value={rating} />
 
             <div className="flex flex-col items-center gap-2">
-                <p className="text-sm font-medium">
+                <p className="text-sm font-medium text-slate-300">
                     {existingReview ? 'تعديل تقييمك' : 'ما هو تقييمك لهذا الكورس؟'}
                 </p>
                 <StarRating
                     initialRating={rating}
-                    onChange={(val) => setRating(val)}
+                    onRatingChangeAction={(val) => setRating(val)} // <--- التعديل هنا
                     size="lg"
                 />
             </div>
@@ -40,10 +39,10 @@ export function ReviewForm({ courseId, existingReview }: { courseId: string, exi
                 name="comment"
                 defaultValue={existingReview?.comment || ''}
                 placeholder="شاركنا رأيك في الكورس (اختياري)..."
-                className="min-h-24 bg-background"
+                className="min-h-24 bg-black/20 border-white/10 text-white focus-visible:ring-emerald-500"
             />
 
-            <Button type="submit" className="w-full" disabled={isPending || rating === 0}>
+            <Button type="submit" className="w-full bg-emerald-500 text-black font-bold hover:bg-emerald-400" disabled={isPending || rating === 0}>
                 {isPending ? 'جاري الحفظ...' : existingReview ? 'تحديث التقييم' : 'إرسال التقييم'}
             </Button>
         </form>

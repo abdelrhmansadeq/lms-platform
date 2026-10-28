@@ -8,6 +8,19 @@ import { UserCircle2, Award, Trophy } from 'lucide-react'
 import { UserBadges } from '@/components/user-badges'
 import { Button } from '@/components/ui/button'
 
+// 1. تعريف أنواع البيانات عشان نمنع any
+type Badge = {
+    id: string;
+    name: string;
+    description: string;
+    icon_name: string;
+    color: string;
+}
+
+type UserBadgeJoin = {
+    badges: Badge | null;
+}
+
 export default async function ProfilePage() {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
@@ -29,15 +42,21 @@ export default async function ProfilePage() {
         .eq('user_id', user.id)
         .order('earned_at', { ascending: false })
 
-    const earnedBadges = (userBadgesData?.map((ub: any) => ub.badges) || []) as any[]
+    // 2. التعديل هنا: التحويل الآمن بدون any
+    const userBadges = (userBadgesData as unknown as UserBadgeJoin[]) || [];
+    const earnedBadges = userBadges
+        .map(ub => ub.badges)
+        .filter((b): b is Badge => b !== null);
 
     return (
         <div className="container mx-auto px-4 py-12 max-w-2xl relative">
 
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-[400px] h-[300px] bg-emerald-500/10 blur-[100px] rounded-full pointer-events-none -z-10" />
+            {/* التعديل هنا: استخدام max-w-100 و h-75 */}
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-100 h-75 bg-emerald-500/10 blur-[100px] rounded-full pointer-events-none -z-10" />
 
-            <Card className="bg-white/[0.02] border-white/5 shadow-2xl animate-fade-up rounded-3xl backdrop-blur-xl overflow-hidden mb-8">
-                <div className="bg-gradient-to-b from-emerald-500/10 to-transparent h-32 w-full absolute top-0 left-0 -z-10"></div>
+            {/* التعديل هنا: bg-white/2 */}
+            <Card className="bg-white/2 border-white/5 shadow-2xl animate-fade-up rounded-3xl backdrop-blur-xl overflow-hidden mb-8">
+                <div className="bg-linear-to-b from-emerald-500/10 to-transparent h-32 w-full absolute top-0 left-0 -z-10"></div>
 
                 <CardHeader className="pt-10 pb-6 text-center border-b border-white/5 relative">
                     <div className="w-24 h-24 bg-[#0B0F17] border border-white/10 rounded-full flex items-center justify-center mx-auto mb-4 shadow-[0_0_20px_-5px_rgba(16,185,129,0.3)] overflow-hidden">
@@ -54,7 +73,7 @@ export default async function ProfilePage() {
                         {profile?.role === 'instructor' ? 'مدرس' : profile?.role === 'admin' ? 'أدمن' : 'طالب'}
                     </CardDescription>
 
-                    {/* عرض الشارات في البروفايل */}
+                    {/* عرض الشارات */}
                     {earnedBadges.length > 0 && (
                         <div className="mt-6 flex flex-col items-center gap-2">
                             <p className="text-sm font-medium text-slate-300 flex items-center gap-1">
@@ -65,8 +84,8 @@ export default async function ProfilePage() {
                     )}
                 </CardHeader>
 
-                {/* زرار سجل النتائج الجديد */}
-                <div className="flex justify-center py-4 border-b border-white/5 bg-white/[0.01]">
+                {/* زرار سجل النتائج */}
+                <div className="flex justify-center py-4 border-b border-white/5 bg-white/1">
                     <Link href="/my-results">
                         <Button variant="outline" className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500 hover:text-black gap-2 transition-all">
                             <Trophy className="w-4 h-4" /> سجل نتائج الاختبارات

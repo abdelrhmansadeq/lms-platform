@@ -7,7 +7,7 @@ type StarRatingProps = {
     initialRating?: number
     maxRating?: number
     readonly?: boolean
-    onChange?: (rating: number) => void
+    onRatingChangeAction?: (rating: number) => void; // <--- الاسم الجديد
     size?: 'sm' | 'md' | 'lg'
 }
 
@@ -15,7 +15,7 @@ export function StarRating({
                                initialRating = 0,
                                maxRating = 5,
                                readonly = false,
-                               onChange,
+                               onRatingChangeAction, // <--- الاسم الجديد
                                size = 'md'
                            }: StarRatingProps) {
     const [rating, setRating] = useState(initialRating)
@@ -40,7 +40,7 @@ export function StarRating({
                         onClick={() => {
                             if (!readonly) {
                                 setRating(starValue)
-                                onChange?.(starValue)
+                                onRatingChangeAction?.(starValue) // <--- الاسم الجديد
                             }
                         }}
                         onMouseEnter={() => !readonly && setHover(starValue)}

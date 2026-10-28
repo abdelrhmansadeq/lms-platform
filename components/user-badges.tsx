@@ -1,6 +1,7 @@
 import { Rocket, Trophy, MessageSquare, Heart, Award } from 'lucide-react'
 
-type Badge = {
+// التعديل هنا: ضفنا export عشان نستخدمه في أي مكان تاني
+export type Badge = {
     id: string;
     name: string;
     description: string;

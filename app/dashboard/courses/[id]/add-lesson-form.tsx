@@ -11,7 +11,6 @@ import { Label } from '@/components/ui/label'
 import { toast } from 'sonner'
 import { RichTextEditor } from '@/components/rich-text-editor'
 
-// 1. تعريف قواعد التحقق
 const lessonSchema = z.object({
     title: z.string().min(3, 'عنوان الدرس يجب أن يكون 3 أحرف على الأقل'),
     youtube_id: z.string().min(1, 'رابط اليوتيوب أو الـ ID مطلوب'),
@@ -23,7 +22,6 @@ export function AddLessonForm({ courseId }: { courseId: string }) {
     const [state, formAction, isPending] = useActionState(addLessonAction, null)
     const [content, setContent] = useState('')
 
-    // 2. إعداد React Hook Form
     const { register, handleSubmit, reset, formState: { errors } } = useForm<LessonFormValues>({
         resolver: zodResolver(lessonSchema),
     })
@@ -31,14 +29,13 @@ export function AddLessonForm({ courseId }: { courseId: string }) {
     useEffect(() => {
         if (state?.success) {
             toast.success(state.success)
-            reset() // تفريغ خانات الفورم
-            setContent('') // تفريغ المحرر
+            reset()
+            setContent('')
         } else if (state?.error) {
             toast.error(state.error)
         }
     }, [state, reset])
 
-    // 3. دالة الإرسال بعد التحقق
     const onSubmit = (data: LessonFormValues) => {
         const formData = new FormData()
         formData.append('courseId', courseId)
@@ -77,7 +74,7 @@ export function AddLessonForm({ courseId }: { courseId: string }) {
                 <Label className="text-slate-300">ملاحظات أو محتوى (اختياري)</Label>
                 <RichTextEditor
                     content={content}
-                    onChange={(html) => setContent(html)}
+                    onChangeAction={setContent} // <--- التعديل هنا
                 />
             </div>
 

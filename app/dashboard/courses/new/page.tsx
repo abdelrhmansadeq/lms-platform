@@ -14,7 +14,6 @@ import Link from 'next/link'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
 
-// 1. تعريف قواعد التحقق
 const courseSchema = z.object({
     title: z.string().min(3, 'عنوان الكورس يجب أن يكون 3 أحرف على الأقل'),
     price: z.string().refine((val) => !isNaN(Number(val)) && Number(val) >= 0, {
@@ -30,11 +29,9 @@ export default function NewCoursePage() {
     const [description, setDescription] = useState('')
     const [thumbnailFile, setThumbnailFile] = useState<File | null>(null)
 
-    // حالة التصنيفات
     const [categories, setCategories] = useState<{id: string, name: string}[]>([])
     const supabase = createClient()
 
-    // جلب التصنيفات من الداتابيز
     useEffect(() => {
         const fetchCategories = async () => {
             const { data } = await supabase.from('categories').select('id, name')
@@ -88,7 +85,6 @@ export default function NewCoursePage() {
                             {errors.title && <p className="text-red-400 text-xs font-medium">{errors.title.message}</p>}
                         </div>
 
-                        {/* قائمة اختيار التصنيف */}
                         <div className="space-y-2">
                             <Label htmlFor="category_id" className="text-slate-300">تصنيف الكورس</Label>
                             <select
@@ -110,7 +106,7 @@ export default function NewCoursePage() {
                             <RichTextEditor
                                 name="description"
                                 content={description}
-                                onChange={setDescription}
+                                onChangeAction={setDescription} // <--- التعديل هنا
                             />
                         </div>
 

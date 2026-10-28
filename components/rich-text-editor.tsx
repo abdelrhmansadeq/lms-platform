@@ -7,11 +7,11 @@ import { Button } from './ui/button'
 
 export function RichTextEditor({
                                    content,
-                                   onChange,
+                                   onChangeAction, // <--- الاسم الجديد
                                    name = 'content'
                                }: {
     content: string;
-    onChange: (html: string) => void;
+    onChangeAction: (html: string) => void; // <--- الاسم الجديد
     name?: string;
 }) {
     const editor = useEditor({
@@ -23,7 +23,7 @@ export function RichTextEditor({
             },
         },
         onUpdate: ({ editor }) => {
-            onChange(editor.getHTML())
+            onChangeAction(editor.getHTML()) // <--- الاسم الجديد
         },
     })
 
@@ -31,7 +31,6 @@ export function RichTextEditor({
 
     return (
         <div className="border border-white/10 rounded-xl overflow-hidden bg-black/20 focus-within:ring-2 focus-within:ring-emerald-500 transition-all">
-            {/* شريط الأدوات (بقى بيتسحب على الموبايل) */}
             <div className="bg-white/5 border-b border-white/10 p-2 flex gap-1 items-center overflow-x-auto scrollbar-hide whitespace-nowrap">
                 <Button
                     type="button"

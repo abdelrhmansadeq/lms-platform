@@ -48,7 +48,7 @@ export function LessonContent({
                 lessonId={lessonId}
                 initialNotes={initialNotes}
                 currentTime={currentTime}
-                onSeek={(time) => playerRef.current?.seekTo(time)}
+                onSeekAction={(time) => playerRef.current?.seekTo(time)} // <--- التعديل هنا
             />
         </div>
     )

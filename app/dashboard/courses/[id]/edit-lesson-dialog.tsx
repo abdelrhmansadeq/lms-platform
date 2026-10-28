@@ -70,7 +70,7 @@ export function EditLessonDialog({ lesson, courseId }: { lesson: LessonData, cou
 
                     <div className="space-y-2">
                         <Label className="text-slate-300">ملاحظات أو محتوى (اختياري)</Label>
-                        <RichTextEditor content={content} onChange={setContent} />
+                        <RichTextEditor content={content} onChangeAction={setContent} /> {/* <--- التعديل هنا */}
                     </div>
 
                     <div className="flex justify-end gap-4 pt-4">

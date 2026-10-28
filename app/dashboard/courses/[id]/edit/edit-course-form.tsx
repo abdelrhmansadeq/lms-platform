@@ -34,7 +34,7 @@ export function EditCourseForm({ course }: { course: CourseData }) {
                 <RichTextEditor
                     name="description"
                     content={description}
-                    onChange={setDescription}
+                    onChangeAction={setDescription} // <--- التعديل هنا
                 />
             </div>
 
