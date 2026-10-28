@@ -3,13 +3,12 @@
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 
-// 1. دالة حفظ تقدم الفيديو (القديمة)
+// 1. دالة حفظ تقدم الفيديو (مع إضافة شارة الخريج)
 export async function saveProgressAction(lessonId: string, courseId: string, watchedSeconds: number, duration: number) {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return { error: 'غير مصرح' }
 
-    // لو الطالب شاف 90% من الفيديو، نعتبره خلص
     const isCompleted = duration > 0 && (watchedSeconds / duration) >= 0.9
 
     const { error } = await supabase
@@ -26,6 +25,53 @@ export async function saveProgressAction(lessonId: string, courseId: string, wat
         })
 
     if (error) return { error: error.message }
+
+    // 🌟 منطق منح شارة "خريج" لما يخلص الكورس كله
+    if (isCompleted) {
+        // 1. عدد دروس الكورس
+        const { count: totalLessons } = await supabase
+            .from('lessons')
+            .select('*', { count: 'exact', head: true })
+            .eq('course_id', courseId)
+
+        // 2. عدد الدروس اللي الطالب خلصها
+        const { count: completedLessons } = await supabase
+            .from('lesson_progress')
+            .select('*', { count: 'exact', head: true })
+            .eq('student_id', user.id)
+            .eq('course_id', courseId)
+            .eq('is_completed', true)
+
+        // 3. لو خلص كل الدروس
+        if (totalLessons && completedLessons && totalLessons === completedLessons) {
+            // بنجيب شارة الخريج
+            const { data: badge } = await supabase
+                .from('badges')
+                .select('id')
+                .eq('name', 'خريج')
+                .single()
+
+            if (badge) {
+                // بنديها للطالب (لو معندوش الشارة دي قبل كده)
+                const { error: badgeError } = await supabase.from('user_badges').insert({
+                    user_id: user.id,
+                    badge_id: badge.id
+                })
+
+                // لو مكنش معاه الشارة، نبعتله إشعار
+                if (!badgeError) {
+                    await supabase.from('notifications').insert({
+                        user_id: user.id,
+                        title: 'إنجاز جديد! 🏆',
+                        message: 'مبروك! لقد حصلت على شارة "خريج" لإتمامك الكورس بالكامل.',
+                        link: '/profile'
+                    })
+                }
+            }
+        }
+    }
+    // --------------------------------------------------
+
     return { success: true }
 }
 
