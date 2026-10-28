@@ -1,41 +1,37 @@
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
+import { Button } from '@/components/ui/button'
+import { adminLogoutAction } from '../admin-login/actions'
+import { ShieldAlert, LogOut } from 'lucide-react'
 
-export default async function AdminLayout({
-                                              children,
-                                          }: {
+export default function AdminLayout({
+                                        children,
+                                    }: {
     children: React.ReactNode
 }) {
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-
-    if (!user) {
-        redirect('/login')
-    }
-
-    const { data: profile } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', user.id)
-        .single()
-
-    // لو مش أدمن، نطرده للصفحة الرئيسية
-    if (profile?.role !== 'admin') {
-        redirect('/')
-    }
-
     return (
-        <div className="container mx-auto px-4 md:px-6 lg:px-8 py-8 relative">
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-200 h-75 bg-red-500/10 blur-[120px] rounded-full pointer-events-none -z-10" />
+        <div className="min-h-screen bg-[#0B0F17] relative">
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-3xl h-75 bg-red-500/10 blur-[120px] rounded-full pointer-events-none -z-10" />
 
-            <div className="mb-8 border-b border-white/5 pb-4">
-                <h1 className="text-3xl font-bold text-white flex items-center gap-3">
-                    <span className="text-red-500">🛡️</span> لوحة الإدارة العليا
-                </h1>
-                <p className="text-slate-400 mt-2">مرحباً بك يا مالك المنصة. من هنا يمكنك التحكم في كل شيء.</p>
+            <div className="container mx-auto px-4 md:px-6 lg:px-8 py-8 relative">
+
+                {/* شريط التحكم العلوي */}
+                <div className="mb-8 border border-red-500/20 bg-red-500/5 rounded-2xl p-4 flex flex-col md:flex-row items-center justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                        <ShieldAlert className="w-6 h-6 text-red-500" />
+                        <div>
+                            <h1 className="text-xl font-bold text-red-500">غرفة التحكم المركزية (Root)</h1>
+                            <p className="text-sm text-slate-400">هذه المنطقة معزولة تماماً عن حسابات المستخدمين.</p>
+                        </div>
+                    </div>
+
+                    <form action={adminLogoutAction}>
+                        <Button type="submit" variant="outline" className="border-red-500/50 text-red-400 hover:bg-red-500 hover:text-white gap-2">
+                            <LogOut className="w-4 h-4" /> تسجيل خروج الأدمن
+                        </Button>
+                    </form>
+                </div>
+
+                {children}
             </div>
-
-            {children}
         </div>
     )
 }

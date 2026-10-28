@@ -3,7 +3,7 @@ import { Metadata } from 'next'
 import Image from 'next/image'
 import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
-import { Card, CardContent, CardTitle } from '@/components/ui/card' // شلت المكتبات اللي مش مستخدمة
+import { Card, CardContent, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import Link from 'next/link'
@@ -12,6 +12,7 @@ import { ReviewForm } from './review-form'
 import { StarRating } from '@/components/star-rating'
 import { CheckCircle2, Lock, PlayCircle, UserCircle2, FileQuestion, ArrowLeft, BookOpen, Clock } from 'lucide-react'
 import { ChatWidget } from '@/components/chat-widget'
+import DOMPurify from 'isomorphic-dompurify' // <--- ضفنا المكتبة دي
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
     const { slug } = await params
@@ -147,9 +148,11 @@ export default async function CourseDetailsPage({ params }: { params: Promise<{ 
                             <StarRating initialRating={Number(avgRating)} readonly size="md" />
                             <span className="text-sm text-slate-400 font-medium">({reviewsCount} تقييم)</span>
                         </div>
+
+                        {/* التعديل هنا: استخدام DOMPurify */}
                         <div
                             className="prose dark:prose-invert max-w-none text-slate-400 text-lg leading-relaxed"
-                            dangerouslySetInnerHTML={{ __html: course.description || '' }}
+                            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(course.description || '') }}
                         />
                     </div>
 
@@ -178,7 +181,7 @@ export default async function CourseDetailsPage({ params }: { params: Promise<{ 
                                 </div>
                             ) : (
                                 <div className="space-y-1">
-                                    {lessons?.map((lesson) => { // شلنا index لأننا مش بنستخدمه
+                                    {lessons?.map((lesson) => {
                                         const isCompleted = completedLessonIds.includes(lesson.id)
                                         return (
                                             <div key={lesson.id} className="group flex items-center justify-between p-4 rounded-xl hover:bg-white/4 transition-all duration-200 border border-transparent hover:border-white/10">
@@ -232,7 +235,7 @@ export default async function CourseDetailsPage({ params }: { params: Promise<{ 
 
                         <div className="grid gap-4 sm:grid-cols-2">
                             {typedReviews.length > 0 ? (
-                                typedReviews.map((review) => ( // شلنا index
+                                typedReviews.map((review) => (
                                     <div key={review.id} className="p-5 bg-white/2 border border-white/5 rounded-2xl shadow-sm">
                                         <div className="flex justify-between items-start mb-3">
                                             <div className="flex items-center gap-3">
@@ -265,7 +268,6 @@ export default async function CourseDetailsPage({ params }: { params: Promise<{ 
                 <div className="animate-fade-up delay-200">
                     <div className="sticky top-24">
                         <Card className="relative bg-white/5 backdrop-blur-xl border border-white/10 shadow-2xl rounded-3xl overflow-hidden">
-                            {/* هنا التعديل: bg-linear-to-b */}
                             <div className="bg-linear-to-b from-emerald-500/10 to-transparent p-8 text-center border-b border-white/5">
                                 <p className="text-sm font-medium text-slate-400 mb-2">سعر الكورس</p>
                                 <CardTitle className="text-5xl font-extrabold text-white tracking-tight">

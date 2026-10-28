@@ -2,9 +2,6 @@ import { createClient } from '@/lib/supabase/server'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Users, GraduationCap, BookOpen, Wallet } from 'lucide-react'
 
-type CourseData = { id: string; price: number; }
-type EnrollmentData = { course_id: string; }
-
 export default async function AdminDashboardPage() {
     const supabase = await createClient()
 
@@ -25,22 +22,9 @@ export default async function AdminDashboardPage() {
         .from('courses')
         .select('*', { count: 'exact', head: true })
 
-    // 4. حساب إجمالي الأرباح (هنلف على كل الاشتراكات ونجمع أسعار الكورسات)
-    const { data: courses } = await supabase.from('courses').select('id, price')
-    const { data: enrollments } = await supabase.from('enrollments').select('course_id')
-
-    let totalPlatformRevenue = 0
-    if (courses && enrollments) {
-        const typedCourses = courses as CourseData[]
-        const typedEnrollments = enrollments as EnrollmentData[]
-
-        typedEnrollments.forEach((enrollment) => {
-            const course = typedCourses.find(c => c.id === enrollment.course_id)
-            if (course) {
-                totalPlatformRevenue += Number(course.price)
-            }
-        })
-    }
+    // 4. حساب إجمالي الأرباح عن طريق الدالة السريعة (RPC)
+    const { data: revenueData } = await supabase.rpc('get_total_platform_revenue')
+    const totalPlatformRevenue = Number(revenueData) || 0
 
     return (
         <div className="space-y-8 animate-fade-up">
@@ -48,7 +32,6 @@ export default async function AdminDashboardPage() {
             {/* كروت الإحصائيات */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
 
-                {/* كارت الطلاب */}
                 <Card className="bg-white/2 border-white/5 text-white overflow-hidden relative">
                     <div className="absolute inset-0 bg-linear-to-br from-blue-500/10 to-transparent pointer-events-none" />
                     <CardHeader className="flex flex-row items-center justify-between pb-2 relative z-10">
@@ -62,7 +45,6 @@ export default async function AdminDashboardPage() {
                     </CardContent>
                 </Card>
 
-                {/* كارت المدرسين */}
                 <Card className="bg-white/2 border-white/5 text-white overflow-hidden relative">
                     <div className="absolute inset-0 bg-linear-to-br from-emerald-500/10 to-transparent pointer-events-none" />
                     <CardHeader className="flex flex-row items-center justify-between pb-2 relative z-10">
@@ -76,7 +58,6 @@ export default async function AdminDashboardPage() {
                     </CardContent>
                 </Card>
 
-                {/* كارت الكورسات */}
                 <Card className="bg-white/2 border-white/5 text-white overflow-hidden relative">
                     <div className="absolute inset-0 bg-linear-to-br from-purple-500/10 to-transparent pointer-events-none" />
                     <CardHeader className="flex flex-row items-center justify-between pb-2 relative z-10">
@@ -90,7 +71,6 @@ export default async function AdminDashboardPage() {
                     </CardContent>
                 </Card>
 
-                {/* كارت الأرباح */}
                 <Card className="bg-white/2 border-white/5 text-white overflow-hidden relative">
                     <div className="absolute inset-0 bg-linear-to-br from-yellow-500/10 to-transparent pointer-events-none" />
                     <CardHeader className="flex flex-row items-center justify-between pb-2 relative z-10">
@@ -107,7 +87,6 @@ export default async function AdminDashboardPage() {
                 </Card>
             </div>
 
-            {/* رسالة ترحيبية أو أدوات إضافية */}
             <Card className="bg-white/2 border-white/5 shadow-sm rounded-3xl p-8 text-center mt-8">
                 <h2 className="text-2xl font-bold text-white mb-2">أهلاً بك في مركز التحكم</h2>
                 <p className="text-slate-400 max-w-2xl mx-auto">

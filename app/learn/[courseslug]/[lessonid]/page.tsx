@@ -5,8 +5,8 @@ import { Button } from '@/components/ui/button'
 import { ArrowRight, PlayCircle, CheckCircle2, Paperclip, Download, FileText, Image as ImageIcon, File } from 'lucide-react'
 import { VideoPlayer } from './video-player'
 import { CommentsSection } from './comments-section'
+import DOMPurify from 'isomorphic-dompurify' // <--- ضفنا المكتبة دي
 
-// تعريف الأنواع
 type AttachmentData = {
     id: string;
     lesson_id: string;
@@ -61,7 +61,6 @@ export default async function LessonPlayerPage({
 
     if (!lesson) notFound()
 
-    // جلب الدرس التالي
     const { data: nextLesson } = await supabase
         .from('lessons')
         .select('id, title')
@@ -145,13 +144,12 @@ export default async function LessonPlayerPage({
                             </div>
                         )}
 
-                        {/* عرض المحتوى المنسق (HTML) */}
+                        {/* التعديل هنا: استخدام DOMPurify */}
                         <div
                             className="prose dark:prose-invert max-w-none mt-4 text-slate-400 leading-relaxed"
-                            dangerouslySetInnerHTML={{ __html: lesson.content || 'لا يوجد محتوى نصي مرفق مع هذا الدرس.' }}
+                            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(lesson.content || 'لا يوجد محتوى نصي مرفق مع هذا الدرس.') }}
                         />
 
-                        {/* المرفقات */}
                         {attachments.length > 0 && (
                             <div className="mt-8 pt-6 border-t border-white/5">
                                 <h3 className="text-lg font-bold mb-4 flex items-center gap-2 text-white">
