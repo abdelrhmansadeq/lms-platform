@@ -1,5 +1,5 @@
 import { MetadataRoute } from 'next'
-import { createClient } from '@/lib/supabase/server'
+import { createClient } from '@supabase/supabase-js' // <--- غيرنا الاستيراد هنا
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://lms-platform-xxxx.vercel.app'
@@ -20,7 +20,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ]
 
     try {
-        const supabase = await createClient()
+        // بنكريت Client عادي من غير كوكيز عشان نمنع مشكلة الـ Dynamic
+        const supabase = createClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL!,
+            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+        )
 
         // 1. روابط الكورسات
         const { data: courses } = await supabase
@@ -50,6 +54,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         return [...staticRoutes, ...courseRoutes, ...postRoutes]
     } catch (error) {
         console.error('Error generating sitemap:', error)
-        return staticRoutes // لو الداتابيز ضربت، نرجع الصفحات الأساسية عشان الـ Build ميفشلش
+        return staticRoutes
     }
 }
