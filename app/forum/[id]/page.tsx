@@ -7,6 +7,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { ArrowRight, UserCircle2, MessageSquare } from 'lucide-react'
 import { ReplyForm } from './reply-form'
+import { UserBadges } from '@/components/user-badges'
+
+// التعديل هنا: ضفنا الشارات في الأنواع
+type ProfileWithBadges = {
+    full_name: string | null;
+    avatar_url: string | null;
+    user_badges: { badges: { id: string; name: string; icon_name: string; color: string } | null }[] | null;
+}
 
 type PostWithProfile = {
     id: string;
@@ -14,14 +22,14 @@ type PostWithProfile = {
     content: string;
     image_url: string | null;
     created_at: string;
-    profiles: { full_name: string | null; avatar_url: string | null; } | null;
+    profiles: ProfileWithBadges | null;
 }
 
 type ReplyWithProfile = {
     id: string;
     content: string;
     created_at: string;
-    profiles: { full_name: string | null; avatar_url: string | null; } | null;
+    profiles: ProfileWithBadges | null;
 }
 
 export default async function PostDetailsPage({ params }: { params: Promise<{ id: string }> }) {
@@ -29,23 +37,42 @@ export default async function PostDetailsPage({ params }: { params: Promise<{ id
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
 
+    // جلب الموضوع مع شارات صاحبه
     const { data: postData } = await supabase
         .from('forum_posts')
-        .select(`id, title, content, image_url, created_at, profiles (full_name, avatar_url)`)
+        .select(`
+      id, title, content, image_url, created_at, 
+      profiles (
+        full_name, 
+        avatar_url,
+        user_badges ( badges (id, name, icon_name, color) )
+      )
+    `)
         .eq('id', id)
         .single()
 
     if (!postData) notFound()
     const post = postData as unknown as PostWithProfile
 
+    // جلب الردود مع شارات أصحابها
     const { data: repliesData } = await supabase
         .from('forum_replies')
-        .select(`id, content, created_at, profiles (full_name, avatar_url)`)
+        .select(`
+      id, content, created_at, 
+      profiles (
+        full_name, 
+        avatar_url,
+        user_badges ( badges (id, name, icon_name, color) )
+      )
+    `)
         .eq('post_id', id)
         .order('created_at', { ascending: true })
 
     const replies = (repliesData as unknown as ReplyWithProfile[]) || []
     const blurDataURL = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=";
+
+    // تجهيز شارات صاحب الموضوع
+    const postUserBadges = post.profiles?.user_badges?.map(ub => ub.badges).filter(b => b !== null) || []
 
     return (
         <div className="container mx-auto px-4 md:px-6 lg:px-8 py-8 max-w-4xl relative">
@@ -64,7 +91,6 @@ export default async function PostDetailsPage({ params }: { params: Promise<{ id
                 <CardHeader className="border-b border-white/5 pb-4 bg-white/[0.01]">
                     <CardTitle className="text-2xl md:text-3xl mb-4 text-white">{post.title}</CardTitle>
                     <div className="flex items-center gap-2 text-sm text-slate-400">
-                        {/* الصورة الشخصية */}
                         {post.profiles?.avatar_url ? (
                             <img src={post.profiles.avatar_url} alt="Avatar" className="w-8 h-8 rounded-full object-cover border border-white/10" />
                         ) : (
@@ -73,7 +99,13 @@ export default async function PostDetailsPage({ params }: { params: Promise<{ id
                             </div>
                         )}
                         <span className="font-semibold text-slate-200">{post.profiles?.full_name || 'طالب'}</span>
-                        <span>•</span>
+
+                        {/* شارات صاحب الموضوع */}
+                        {postUserBadges.length > 0 && (
+                            <UserBadges badges={postUserBadges as any} size="sm" />
+                        )}
+
+                        <span className="mr-2">•</span>
                         <span>{new Date(post.created_at).toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
                     </div>
                 </CardHeader>
@@ -104,25 +136,35 @@ export default async function PostDetailsPage({ params }: { params: Promise<{ id
 
                 <div className="space-y-4 mt-6">
                     {replies.length > 0 ? (
-                        replies.map((reply) => (
-                            <div key={reply.id} className="p-5 bg-white/[0.02] border border-white/5 rounded-2xl shadow-sm">
-                                <div className="flex items-center gap-3 mb-3">
-                                    {/* صورة صاحب الرد */}
-                                    {reply.profiles?.avatar_url ? (
-                                        <img src={reply.profiles.avatar_url} alt="Avatar" className="w-8 h-8 rounded-full object-cover border border-white/10" />
-                                    ) : (
-                                        <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-slate-300 font-bold">
-                                            {reply.profiles?.full_name?.charAt(0) || 'ط'}
-                                        </div>
-                                    )}
-                                    <span className="font-semibold text-sm text-slate-200">{reply.profiles?.full_name || 'طالب'}</span>
-                                    <span className="text-xs text-slate-500 mr-auto">
-                    {new Date(reply.created_at).toLocaleDateString('ar-EG')}
-                  </span>
+                        replies.map((reply) => {
+                            // تجهيز شارات صاحب الرد
+                            const replyUserBadges = reply.profiles?.user_badges?.map(ub => ub.badges).filter(b => b !== null) || []
+
+                            return (
+                                <div key={reply.id} className="p-5 bg-white/[0.02] border border-white/5 rounded-2xl shadow-sm">
+                                    <div className="flex items-center gap-3 mb-3">
+                                        {reply.profiles?.avatar_url ? (
+                                            <img src={reply.profiles.avatar_url} alt="Avatar" className="w-8 h-8 rounded-full object-cover border border-white/10" />
+                                        ) : (
+                                            <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-slate-300 font-bold">
+                                                {reply.profiles?.full_name?.charAt(0) || 'ط'}
+                                            </div>
+                                        )}
+                                        <span className="font-semibold text-sm text-slate-200">{reply.profiles?.full_name || 'طالب'}</span>
+
+                                        {/* شارات صاحب الرد */}
+                                        {replyUserBadges.length > 0 && (
+                                            <UserBadges badges={replyUserBadges as any} size="sm" />
+                                        )}
+
+                                        <span className="text-xs text-slate-500 mr-auto">
+                      {new Date(reply.created_at).toLocaleDateString('ar-EG')}
+                    </span>
+                                    </div>
+                                    <p className="text-slate-300 whitespace-pre-wrap leading-relaxed">{reply.content}</p>
                                 </div>
-                                <p className="text-slate-300 whitespace-pre-wrap leading-relaxed">{reply.content}</p>
-                            </div>
-                        ))
+                            )
+                        })
                     ) : (
                         <p className="text-center text-slate-500 py-8 bg-white/[0.02] rounded-2xl border border-white/5 border-dashed">لا توجد ردود بعد. كن أول من يرد!</p>
                     )}
