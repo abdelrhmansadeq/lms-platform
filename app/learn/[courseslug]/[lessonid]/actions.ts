@@ -71,3 +71,48 @@ export async function deleteLessonCommentAction(commentId: string) {
     revalidatePath(`/learn/[courseslug]/[lessonid]`, 'page')
     return { success: 'تم حذف التعليق' }
 }
+
+// 4. إضافة ملاحظة جديدة (Video Note)
+export async function addLessonNoteAction(_prevState: { error?: string; success?: string } | null, formData: FormData) {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { error: 'يجب تسجيل الدخول' }
+
+    const lessonId = formData.get('lessonId') as string
+    const content = formData.get('content') as string
+    const timestampSeconds = Number(formData.get('timestampSeconds'))
+
+    if (!content || content.trim().length < 2) {
+        return { error: 'الملاحظة لا يمكن أن تكون فارغة' }
+    }
+
+    const { error } = await supabase.from('lesson_notes').insert({
+        user_id: user.id,
+        lesson_id: lessonId,
+        content: content.trim(),
+        timestamp_seconds: timestampSeconds
+    })
+
+    if (error) return { error: 'حدث خطأ أثناء إضافة الملاحظة' }
+
+    revalidatePath(`/learn/[courseslug]/[lessonid]`, 'page')
+    return { success: 'تم إضافة الملاحظة بنجاح' }
+}
+
+// 5. حذف ملاحظة
+export async function deleteLessonNoteAction(noteId: string) {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { error: 'غير مصرح' }
+
+    const { error } = await supabase
+        .from('lesson_notes')
+        .delete()
+        .eq('id', noteId)
+        .eq('user_id', user.id)
+
+    if (error) return { error: 'حدث خطأ أثناء حذف الملاحظة' }
+
+    revalidatePath(`/learn/[courseslug]/[lessonid]`, 'page')
+    return { success: 'تم حذف الملاحظة' }
+}

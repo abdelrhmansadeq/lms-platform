@@ -3,9 +3,9 @@ import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { ArrowRight, PlayCircle, CheckCircle2, Paperclip, Download, FileText, Image as ImageIcon, File } from 'lucide-react'
-import { VideoPlayer } from './video-player'
+import { LessonContent } from './lesson-content' // <--- ضفنا المكون الجديد ده
 import { CommentsSection } from './comments-section'
-import DOMPurify from 'isomorphic-dompurify' // <--- ضفنا المكتبة دي
+import DOMPurify from 'isomorphic-dompurify'
 
 type AttachmentData = {
     id: string;
@@ -61,6 +61,7 @@ export default async function LessonPlayerPage({
 
     if (!lesson) notFound()
 
+    // جلب الدرس التالي
     const { data: nextLesson } = await supabase
         .from('lessons')
         .select('id, title')
@@ -96,6 +97,16 @@ export default async function LessonPlayerPage({
 
     const comments = (commentsData as unknown as CommentWithProfile[]) || []
 
+    // جلب ملاحظات الطالب
+    const { data: notesData } = await supabase
+        .from('lesson_notes')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('lesson_id', lesson.id)
+        .order('timestamp_seconds', { ascending: true }) // بنرتبهم حسب وقت الفيديو
+
+    const notes = notesData || []
+
     const getFileIcon = (type: string) => {
         if (type.includes('image')) return <ImageIcon className="w-5 h-5 text-blue-500" />
         if (type.includes('pdf')) return <FileText className="w-5 h-5 text-red-500" />
@@ -120,13 +131,15 @@ export default async function LessonPlayerPage({
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <div className="lg:col-span-2 space-y-6 animate-fade-up delay-100">
 
-                    <VideoPlayer
+                    {/* استخدمنا المكون الجديد اللي فيه الفيديو والملاحظات */}
+                    <LessonContent
                         youtubeId={lesson.youtube_id}
                         lessonId={lesson.id}
                         courseId={course.id}
                         initialProgress={progress?.watched_seconds || 0}
                         nextLesson={nextLesson ? { id: nextLesson.id, title: nextLesson.title } : null}
                         courseSlug={course.slug}
+                        initialNotes={notes}
                     />
 
                     <div className="bg-white/2 p-6 md:p-8 rounded-3xl border border-white/5">
@@ -144,12 +157,12 @@ export default async function LessonPlayerPage({
                             </div>
                         )}
 
-                        {/* التعديل هنا: استخدام DOMPurify */}
                         <div
                             className="prose dark:prose-invert max-w-none mt-4 text-slate-400 leading-relaxed"
                             dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(lesson.content || 'لا يوجد محتوى نصي مرفق مع هذا الدرس.') }}
                         />
 
+                        {/* المرفقات */}
                         {attachments.length > 0 && (
                             <div className="mt-8 pt-6 border-t border-white/5">
                                 <h3 className="text-lg font-bold mb-4 flex items-center gap-2 text-white">

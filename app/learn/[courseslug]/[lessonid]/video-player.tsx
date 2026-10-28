@@ -1,27 +1,35 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, forwardRef, useImperativeHandle } from 'react'
 import YouTube, { YouTubeEvent, YouTubePlayer } from 'react-youtube'
 import { saveProgressAction } from './actions'
 import { Button } from '@/components/ui/button'
 import { useRouter } from 'next/navigation'
 import { Play } from 'lucide-react'
 
-export function VideoPlayer({
-                                youtubeId,
-                                lessonId,
-                                courseId,
-                                initialProgress,
-                                nextLesson,
-                                courseSlug
-                            }: {
+export type VideoPlayerRef = {
+    seekTo: (seconds: number) => void;
+}
+
+type VideoPlayerProps = {
     youtubeId: string
     lessonId: string
     courseId: string
     initialProgress: number
     nextLesson: { id: string, title: string } | null
     courseSlug: string
-}) {
+    onTimeUpdate?: (time: number) => void // عشان نبعت الوقت للـ Notes
+}
+
+export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(({
+                                                                             youtubeId,
+                                                                             lessonId,
+                                                                             courseId,
+                                                                             initialProgress,
+                                                                             nextLesson,
+                                                                             courseSlug,
+                                                                             onTimeUpdate
+                                                                         }, ref) => {
     const [progress, setProgress] = useState(0)
     const [showNext, setShowNext] = useState(false)
     const [countdown, setCountdown] = useState(5)
@@ -30,6 +38,16 @@ export function VideoPlayer({
     const latestTimeRef = useRef(initialProgress)
     const durationRef = useRef(0)
     const router = useRouter()
+
+    // دالة عشان الـ Notes تقدر تنقل الفيديو للحتة اللي إحنا عايزينها
+    useImperativeHandle(ref, () => ({
+        seekTo: (seconds: number) => {
+            if (playerRef.current) {
+                playerRef.current.seekTo(seconds, true)
+                playerRef.current.playVideo() // نشغله لو كان واقف
+            }
+        }
+    }))
 
     const opts = {
         height: '100%',
@@ -55,7 +73,7 @@ export function VideoPlayer({
         if (event.data === 2) {
             saveProgressImmediately()
         }
-        if (event.data === 0) { // 0 = Ended
+        if (event.data === 0) {
             saveProgressImmediately()
             if (nextLesson) {
                 setShowNext(true)
@@ -97,6 +115,9 @@ export function VideoPlayer({
                 const percentage = (currentTime / duration) * 100
                 setProgress(percentage)
 
+                // بنبعت الوقت للـ NotesSection عشان يظهر
+                if (onTimeUpdate) onTimeUpdate(currentTime)
+
                 if (Math.abs(currentTime - lastSavedRef.current) >= 10) {
                     lastSavedRef.current = currentTime
                     await saveProgressAction(lessonId, courseId, currentTime, duration)
@@ -110,7 +131,7 @@ export function VideoPlayer({
                 saveProgressAction(lessonId, courseId, latestTimeRef.current, durationRef.current)
             }
         }
-    }, [lessonId, courseId])
+    }, [lessonId, courseId, onTimeUpdate])
 
     return (
         <div className="space-y-4">
@@ -124,7 +145,6 @@ export function VideoPlayer({
                     iframeClassName="w-full h-full"
                 />
 
-                {/* شاشة الدرس التالي */}
                 {showNext && nextLesson && (
                     <div className="absolute inset-0 bg-[#0B0F17]/95 backdrop-blur-sm z-20 flex flex-col items-center justify-center text-center p-6 animate-fade-in">
                         <h3 className="text-slate-400 text-sm font-medium mb-2">الدرس التالي</h3>
@@ -161,4 +181,6 @@ export function VideoPlayer({
             </div>
         </div>
     )
-}
+})
+
+VideoPlayer.displayName = 'VideoPlayer'
