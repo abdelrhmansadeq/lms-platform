@@ -1,18 +1,18 @@
 /* eslint-disable @next/next/no-img-element */
-import {Metadata} from 'next'
+import { Metadata } from 'next'
 import Image from 'next/image'
-import {createClient} from '@/lib/supabase/server'
-import {notFound} from 'next/navigation'
-import {Card, CardContent, CardTitle} from '@/components/ui/card'
-import {Button} from '@/components/ui/button'
-import {Progress} from '@/components/ui/progress'
+import { createClient } from '@/lib/supabase/server'
+import { notFound } from 'next/navigation'
+import { Card, CardContent, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Progress } from '@/components/ui/progress'
 import Link from 'next/link'
-import {EnrollForm} from './enroll-form'
-import {ReviewForm} from './review-form'
-import {StarRating} from '@/components/star-rating'
-import {ArrowLeft, BookOpen, CheckCircle2, Clock, FileQuestion, Lock, PlayCircle, UserCircle2} from 'lucide-react'
-import {ChatWidget} from '@/components/chat-widget'
-import DOMPurify from 'isomorphic-dompurify' // <--- ضفنا المكتبة دي
+import { EnrollForm } from './enroll-form'
+import { ReviewForm } from './review-form'
+import { StarRating } from '@/components/star-rating'
+import { CheckCircle2, Lock, PlayCircle, UserCircle2, FileQuestion, ArrowLeft, BookOpen, Clock } from 'lucide-react'
+import { ChatWidget } from '@/components/chat-widget'
+import DOMPurify from 'isomorphic-dompurify'
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
     const { slug } = await params
@@ -117,10 +117,57 @@ export default async function CourseDetailsPage({ params }: { params: Promise<{ 
 
     const blurDataURL = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=";
 
+    // 🌟 تجهيز كود الـ JSON-LD لجوجل
+    const jsonLd = {
+        '@context': 'https://schema.org',
+        '@type': 'Course',
+        name: course.title,
+        description: course.description?.replace(/<[^>]*>?/gm, '') || 'كورس تعليمي على منصة LMS',
+        provider: {
+            '@type': 'Organization',
+            name: 'منصة LMS',
+            sameAs: process.env.NEXT_PUBLIC_SITE_URL || 'https://lms-platform.vercel.app'
+        },
+        offers: {
+            '@type': 'Offer',
+            price: course.price,
+            priceCurrency: 'EGP',
+            category: course.price === 0 ? 'Free' : 'Paid',
+            availability: 'https://schema.org/InStock'
+        },
+        hasCourseInstance: {
+            '@type': 'CourseInstance',
+            courseMode: 'Online',
+            instructor: {
+                '@type': 'Person',
+                name: course.profiles?.full_name || 'مدرس المنصة'
+            }
+        }
+    };
+
+    // لو فيه تقييمات، بنضيفها للكود
+    if (reviewsCount > 0) {
+        Object.assign(jsonLd, {
+            aggregateRating: {
+                '@type': 'AggregateRating',
+                ratingValue: avgRating,
+                reviewCount: reviewsCount,
+                bestRating: '5',
+                worstRating: '1'
+            }
+        });
+    }
+
     return (
         <div className="container mx-auto px-4 md:px-6 lg:px-8 py-8 max-w-6xl relative">
 
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-200 h-100 bg-emerald-500/10 blur-[120px] rounded-full pointer-events-none -z-10" />
+            {/* 🌟 حقن كود JSON-LD في الصفحة */}
+            <script
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+            />
+
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-[800px] h-[400px] bg-emerald-500/10 blur-[120px] rounded-full pointer-events-none -z-10" />
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
 
@@ -129,7 +176,7 @@ export default async function CourseDetailsPage({ params }: { params: Promise<{ 
                     {course.thumbnail_url && (
                         <div className="w-full h-64 md:h-[400px] rounded-3xl overflow-hidden border border-white/10 shadow-2xl relative bg-slate-800 group">
                             <Image src={course.thumbnail_url} alt={course.title} fill priority placeholder="blur" blurDataURL={blurDataURL} className="object-cover group-hover:scale-105 transition-transform duration-700" />
-                            <div className="absolute inset-0 bg-linear-to-t from-[#0B0F17] via-[#0B0F17]/40 to-transparent" />
+                            <div className="absolute inset-0 bg-gradient-to-t from-[#0B0F17] via-[#0B0F17]/40 to-transparent" />
                             <div className="absolute bottom-6 right-6 left-6">
                                 <h1 className="text-3xl md:text-5xl font-bold text-white mb-4 leading-tight tracking-tight">{course.title}</h1>
                                 <div className="flex flex-wrap items-center gap-4">
@@ -149,7 +196,6 @@ export default async function CourseDetailsPage({ params }: { params: Promise<{ 
                             <span className="text-sm text-slate-400 font-medium">({reviewsCount} تقييم)</span>
                         </div>
 
-                        {/* التعديل هنا: استخدام DOMPurify */}
                         <div
                             className="prose dark:prose-invert max-w-none text-slate-400 text-lg leading-relaxed"
                             dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(course.description || '') }}
@@ -268,7 +314,7 @@ export default async function CourseDetailsPage({ params }: { params: Promise<{ 
                 <div className="animate-fade-up delay-200">
                     <div className="sticky top-24">
                         <Card className="relative bg-white/5 backdrop-blur-xl border border-white/10 shadow-2xl rounded-3xl overflow-hidden">
-                            <div className="bg-linear-to-b from-emerald-500/10 to-transparent p-8 text-center border-b border-white/5">
+                            <div className="bg-gradient-to-b from-emerald-500/10 to-transparent p-8 text-center border-b border-white/5">
                                 <p className="text-sm font-medium text-slate-400 mb-2">سعر الكورس</p>
                                 <CardTitle className="text-5xl font-extrabold text-white tracking-tight">
                                     {course.price === 0 ? 'مجاني' : `${course.price}`}

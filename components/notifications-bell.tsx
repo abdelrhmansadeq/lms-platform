@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useId } from 'react'
 import Link from 'next/link'
 import { Bell, Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -31,12 +31,16 @@ export function NotificationsBell({
     const router = useRouter()
     const supabase = createClient()
 
+    // 🌟 السر هنا: useId بيعمل اسم فريد لكل مكون عشان ميحصلش تعارض
+    const uniqueId = useId()
+    const channelName = `realtime_notifications_${currentUserId}_${uniqueId}`
+
     const unreadCount = notifications.filter(n => !n.is_read).length
 
-    // 🌟 الاستماع للإشعارات الجديدة لحظة بلحظة (Realtime)
+    // الاستماع للإشعارات الجديدة لحظة بلحظة (Realtime)
     useEffect(() => {
         const channel = supabase
-            .channel('realtime_notifications')
+            .channel(channelName) // <-- استخدمنا الاسم الفريد هنا
             .on(
                 'postgres_changes',
                 {
@@ -48,10 +52,8 @@ export function NotificationsBell({
                 (payload) => {
                     const newNotif = payload.new as Notification
 
-                    // نضيف الإشعار الجديد في أول القائمة
                     setNotifications((prev) => [newNotif, ...prev])
 
-                    // نظهر إشعار (Toast) سريع للمستخدم
                     toast.success(newNotif.title, {
                         description: newNotif.message,
                         action: {
@@ -66,7 +68,7 @@ export function NotificationsBell({
         return () => {
             supabase.removeChannel(channel)
         }
-    }, [currentUserId, supabase, router])
+    }, [currentUserId, supabase, router, channelName]) // <-- ضفنا channelName في الـ dependencies
 
     const handleNotificationClick = async (id: string, link: string, isRead: boolean) => {
         setIsOpen(false)

@@ -1,8 +1,19 @@
 import { createClient } from '@/lib/supabase/server'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Users, GraduationCap, BookOpen, Wallet, UserCircle2 } from 'lucide-react'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { Users, GraduationCap, BookOpen, Wallet, UserCircle2, TrendingUp } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
+import { AdminChart } from './admin-chart'
+
+type ProfileData = { created_at: string; }
+
+// التعديل هنا: تعريف نوع لبيانات الشهور
+type MonthData = {
+    monthIndex: number;
+    year: number;
+    name: string;
+    users: number;
+}
 
 export default async function AdminDashboardPage() {
     const supabase = await createClient()
@@ -27,6 +38,40 @@ export default async function AdminDashboardPage() {
     // 4. حساب إجمالي الأرباح عن طريق الدالة السريعة (RPC)
     const { data: revenueData } = await supabase.rpc('get_total_platform_revenue')
     const totalPlatformRevenue = Number(revenueData) || 0
+
+    // 5. تجهيز بيانات الرسم البياني
+    const { data: profilesData } = await supabase
+        .from('profiles')
+        .select('created_at')
+
+    const profiles = (profilesData as unknown as ProfileData[]) || []
+
+    const months = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر']
+    const today = new Date()
+
+    // التعديل هنا: استخدمنا النوع MonthData
+    const last6Months: MonthData[] = []
+
+    for (let i = 5; i >= 0; i--) {
+        const d = new Date(today.getFullYear(), today.getMonth() - i, 1)
+        last6Months.push({
+            monthIndex: d.getMonth(),
+            year: d.getFullYear(),
+            name: months[d.getMonth()],
+            users: 0
+        })
+    }
+
+    profiles.forEach((profile) => {
+        const joinDate = new Date(profile.created_at)
+        // التعديل هنا: شلنا any
+        const monthData = last6Months.find(m => m.monthIndex === joinDate.getMonth() && m.year === joinDate.getFullYear())
+        if (monthData) {
+            monthData.users += 1
+        }
+    })
+
+    const chartData = last6Months.map(m => ({ name: m.name, users: m.users }))
 
     return (
         <div className="space-y-8 animate-fade-up">
@@ -88,6 +133,22 @@ export default async function AdminDashboardPage() {
                     </CardContent>
                 </Card>
             </div>
+
+            {/* الرسم البياني لنمو المستخدمين */}
+            <Card className="bg-white/2 border-white/5 shadow-sm rounded-3xl animate-fade-up delay-100">
+                <CardHeader>
+                    <CardTitle className="text-white flex items-center gap-2">
+                        <TrendingUp className="w-5 h-5 text-blue-400" />
+                        نمو المنصة (آخر 6 شهور)
+                    </CardTitle>
+                    <CardDescription className="text-slate-400">
+                        عدد المستخدمين الجدد الذين سجلوا في المنصة شهرياً.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <AdminChart data={chartData} />
+                </CardContent>
+            </Card>
 
             <Card className="bg-white/2 border-white/5 shadow-sm rounded-3xl p-8 text-center mt-8">
                 <h2 className="text-2xl font-bold text-white mb-2">أهلاً بك في مركز التحكم</h2>
