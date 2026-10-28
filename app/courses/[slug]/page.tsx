@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import Link from 'next/link'
 import { EnrollForm } from './enroll-form'
-import { FreeEnrollButton } from './free-enroll-button' // <--- ضفنا ده
+import { FreeEnrollButton } from './free-enroll-button'
 import { ReviewForm } from './review-form'
 import { StarRating } from '@/components/star-rating'
 import { CheckCircle2, Lock, PlayCircle, UserCircle2, FileQuestion, ArrowLeft, BookOpen, Clock } from 'lucide-react'
@@ -335,7 +335,6 @@ export default async function CourseDetailsPage({ params }: { params: Promise<{ 
                                         <Button className="w-full h-12 text-lg bg-white/5 border border-white/10 text-white hover:bg-white/10" disabled>أنت مشترك بالفعل</Button>
                                     </div>
                                 ) : course.price === 0 ? (
-                                    // التعديل هنا: لو الكورس مجاني يظهر زرار الاشتراك المباشر
                                     <div className="space-y-4">
                                         <p className="text-sm text-slate-400 text-center mb-4">هذا الكورس مجاني بالكامل. انضم الآن!</p>
                                         <FreeEnrollButton courseId={course.id} />
@@ -362,6 +361,7 @@ export default async function CourseDetailsPage({ params }: { params: Promise<{ 
                     currentUserId={user.id}
                     otherUserId={course.instructor_id}
                     otherUserName={course.profiles?.full_name || 'المدرس'}
+                    courseId={course.id} // <--- التعديل هنا
                 />
             )}
         </div>

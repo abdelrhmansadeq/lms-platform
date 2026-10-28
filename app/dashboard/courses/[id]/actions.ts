@@ -2,6 +2,11 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { fileTypeFromBuffer } from 'file-type'
+import { randomUUID } from 'crypto'
+
+const ALLOWED_MIME = new Set(['application/pdf', 'image/png', 'image/jpeg', 'image/webp'])
+const MAX_SIZE = 20 * 1024 * 1024 // 20MB
 
 // دالة مساعدة لاستخراج ID فيديو اليوتيوب
 function extractYouTubeId(url: string) {
@@ -42,11 +47,7 @@ export async function addLessonAction(_prevState: { error?: string; success?: st
 
     if (error) return { error: error.message }
 
-    // إرسال إشعارات للطلاب المشتركين
-    const { data: enrollments } = await supabase
-        .from('enrollments')
-        .select('student_id')
-        .eq('course_id', courseId)
+    const { data: enrollments } = await supabase.from('enrollments').select('student_id').eq('course_id', courseId)
 
     if (enrollments && enrollments.length > 0) {
         const { data: instructorProfile } = await supabase.from('profiles').select('full_name').eq('id', user.id).single()
@@ -175,7 +176,7 @@ export async function updateLessonAction(_prevState: { error?: string; success?:
     return { success: 'تم تعديل الدرس بنجاح' }
 }
 
-// 7. إضافة مرفق لدرس (مع التحقق من النوع)
+// 7. إضافة مرفق لدرس (النسخة الأمنة والمطورة)
 export async function addAttachmentAction(_prevState: { error?: string; success?: string } | null, formData: FormData) {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
@@ -188,35 +189,47 @@ export async function addAttachmentAction(_prevState: { error?: string; success?
 
     if (!title || title.trim().length < 2) return { error: 'يرجى كتابة اسم للمرفق (حرفين على الأقل)' }
     if (!file || file.size === 0) return { error: 'يرجى اختيار ملف أولاً' }
-    if (file.size > 10 * 1024 * 1024) return { error: 'حجم الملف يجب أن يكون أقل من 10 ميجابايت' }
+    if (file.size > MAX_SIZE) return { error: 'حجم الملف يجب أن يكون أقل من 20 ميجابايت' }
 
-    // 🛡️ التحقق من نوع الملف
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf', 'application/zip', 'application/x-rar-compressed', 'text/plain'];
+    // التحقق من محتوى الملف (Magic Bytes)
+    const buffer = Buffer.from(await file.arrayBuffer())
+    const detected = await fileTypeFromBuffer(buffer)
 
-    if (!allowedTypes.includes(file.type)) {
-        return { error: 'نوع الملف غير مدعوم. يرجى رفع صورة، PDF، أو ملف مضغوط.' }
+    if (!detected || !ALLOWED_MIME.has(detected.mime)) {
+        return { error: 'نوع الملف غير مدعوم أو محتواه غير صالح.' }
     }
 
-    const { data: course } = await supabase.from('courses').select('instructor_id').eq('id', courseId).single()
-    if (course?.instructor_id !== user.id) return { error: 'غير مصرح لك' }
+    // التأكد من الصلاحية
+    const { data: lesson } = await supabase
+        .from('lessons')
+        .select('id, course_id, courses!inner(instructor_id)')
+        .eq('id', lessonId)
+        .eq('course_id', courseId)
+        .eq('courses.instructor_id', user.id)
+        .maybeSingle()
 
-    const fileExt = file.name.split('.').pop()
-    const fileName = `${user.id}-${Date.now()}.${fileExt}`
+    if (!lesson) return { error: 'غير مصرح لك بإضافة مرفق لهذا الدرس' }
 
+    // تجهيز المسار (instructor_id/course_id/lesson_id/uuid.ext)
+    const safeName = `${user.id}/${courseId}/${lessonId}/${randomUUID()}.${detected.ext}`
+
+    // رفع الملف
     const { error: uploadError } = await supabase.storage
         .from('lesson-files')
-        .upload(fileName, file)
+        .upload(safeName, buffer, {
+            contentType: detected.mime,
+            upsert: false,
+        })
 
     if (uploadError) return { error: 'حدث خطأ أثناء رفع الملف' }
 
-    const { data: urlData } = supabase.storage.from('lesson-files').getPublicUrl(fileName)
-
+    // حفظ المسار في الداتابيز
     const { error: dbError } = await supabase.from('lesson_attachments').insert({
         lesson_id: lessonId,
         title: title.trim(),
         file_name: file.name,
-        file_url: urlData.publicUrl,
-        file_type: file.type
+        file_path: safeName,
+        file_type: detected.mime
     })
 
     if (dbError) return { error: 'حدث خطأ أثناء حفظ بيانات الملف' }
@@ -236,7 +249,7 @@ export async function deleteAttachmentAction(attachmentId: string, courseId: str
 
     const { data: attachment } = await supabase
         .from('lesson_attachments')
-        .select('lesson_id, file_url, lessons(course_id)')
+        .select('lesson_id, file_path, lessons(course_id)')
         .eq('id', attachmentId)
         .single()
 
@@ -245,11 +258,8 @@ export async function deleteAttachmentAction(attachmentId: string, courseId: str
 
     if (lessonCourseId !== courseId) return { error: 'هذا المرفق لا ينتمي لهذا الكورس' }
 
-    if (attachment?.file_url) {
-        const fileName = attachment.file_url.split('/').pop()
-        if (fileName) {
-            await supabase.storage.from('lesson-files').remove([fileName])
-        }
+    if (attachment?.file_path) {
+        await supabase.storage.from('lesson-files').remove([attachment.file_path])
     }
 
     const { error } = await supabase.from('lesson_attachments').delete().eq('id', attachmentId)
@@ -260,7 +270,7 @@ export async function deleteAttachmentAction(attachmentId: string, courseId: str
     return { success: 'تم حذف المرفق بنجاح' }
 }
 
-// 9. تحديث ترتيب الدروس (Drag & Drop) - الدالة اللي كانت ناقصة
+// 9. تحديث ترتيب الدروس
 export async function updateLessonOrderAction(courseId: string, updates: { id: string, position: number }[]) {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()

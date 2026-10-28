@@ -4,12 +4,12 @@ import { updateSession } from '@/lib/supabase/middleware'
 export async function middleware(request: NextRequest) {
     const url = request.nextUrl.clone()
 
-    // 🛡️ الحماية القصوى للوحة الإدارة (مسار /admin)
+    // 🛡️ الحماية القصوى للوحة الإدارة (فحص وجود الكوكي فقط)
     if (url.pathname.startsWith('/admin') && !url.pathname.startsWith('/admin-login')) {
-        const adminSession = request.cookies.get('admin_session')?.value
+        const token = request.cookies.get('admin_session')?.value
 
-        // لو مفيش كوكي إدارة صالح، نطرده لصفحة اللوجين السرية
-        if (!adminSession || adminSession !== 'authenticated') {
+        // لو الكوكي مش موجودة أصلاً، نطرده
+        if (!token) {
             url.pathname = '/admin-login'
             return NextResponse.redirect(url)
         }

@@ -4,7 +4,7 @@ import { QuizClient } from './quiz-client'
 import Link from 'next/link'
 import { ArrowRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { startQuizAttemptAction } from './actions' // <--- ضفنا ده عشان نبدأ المحاولة
+import { startQuizAttemptAction } from './actions'
 
 type QuizWithCourse = {
     id: string;
@@ -17,6 +17,12 @@ type QuizWithCourse = {
     } | null;
 };
 
+type QuestionData = {
+    id: string;
+    question_text: string;
+    options: string[];
+}
+
 export default async function QuizPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = await params
     const supabase = await createClient()
@@ -24,13 +30,9 @@ export default async function QuizPage({ params }: { params: Promise<{ id: strin
 
     if (!user) redirect('/login')
 
-    // 1. جلب بيانات الاختبار
     const { data: quizData } = await supabase
         .from('quizzes')
-        .select(`
-      id, title, duration_minutes,
-      courses (id, slug, title)
-    `)
+        .select(`id, title, duration_minutes, courses (id, slug, title)`)
         .eq('id', id)
         .single()
 
@@ -41,23 +43,21 @@ export default async function QuizPage({ params }: { params: Promise<{ id: strin
 
     if (!course) notFound();
 
-    // 2. التأكد إن الطالب مشترك في الكورس
-    const { data: enrollment } = await supabase
-        .from('enrollments')
-        .select('id')
-        .eq('student_id', user.id)
-        .eq('course_id', course.id)
-        .single()
+    // جلب الأسئلة عن طريق الدالة الآمنة (بدون الإجابات)
+    const { data: questionsData, error: questionsError } = await supabase.rpc('get_quiz_questions', {
+        p_quiz_id: quiz.id
+    })
 
-    if (!enrollment) {
-        redirect(`/courses/${course.slug}`)
+    if (questionsError) {
+        return (
+            <div className="container mx-auto py-20 text-center">
+                <h2 className="text-2xl font-bold mb-4 text-red-400">غير مصرح لك بالدخول لهذا الاختبار</h2>
+                <Link href={`/courses/${course.slug}`}><Button>العودة للكورس</Button></Link>
+            </div>
+        )
     }
 
-    // 3. جلب الأسئلة
-    const { data: questions } = await supabase
-        .from('questions')
-        .select('id, question_text, options')
-        .eq('quiz_id', quiz.id)
+    const questions = questionsData as QuestionData[]
 
     if (!questions || questions.length === 0) {
         return (
@@ -68,7 +68,7 @@ export default async function QuizPage({ params }: { params: Promise<{ id: strin
         )
     }
 
-    // 4. بدء المحاولة (تسجيل وقت البدء في الداتابيز)
+    // بدء المحاولة (تسجيل وقت البدء)
     const attemptData = await startQuizAttemptAction(quiz.id, questions.length)
 
     if (attemptData.error) {
@@ -79,9 +79,6 @@ export default async function QuizPage({ params }: { params: Promise<{ id: strin
             </div>
         )
     }
-
-    const attemptId = attemptData.attemptId!
-    const startedAt = attemptData.startedAt!
 
     return (
         <div className="container mx-auto px-4 md:px-6 lg:px-8 py-8 max-w-3xl">
@@ -100,8 +97,8 @@ export default async function QuizPage({ params }: { params: Promise<{ id: strin
                 courseSlug={course.slug}
                 questions={questions}
                 durationMinutes={quiz.duration_minutes || 0}
-                attemptId={attemptId} // <--- بنمرر الـ ID
-                startedAt={startedAt} // <--- بنمرر وقت البدء
+                attemptId={attemptData.attemptId!}
+                startedAt={attemptData.startedAt!}
             />
         </div>
     )

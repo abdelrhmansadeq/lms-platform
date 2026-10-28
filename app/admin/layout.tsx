@@ -1,12 +1,16 @@
 import { Button } from '@/components/ui/button'
 import { adminLogoutAction } from '../admin-login/actions'
 import { ShieldAlert, LogOut } from 'lucide-react'
+import { requireAdmin } from '@/lib/admin/require-admin'
 
-export default function AdminLayout({
-                                        children,
-                                    }: {
+export default async function AdminLayout({
+                                              children,
+                                          }: {
     children: React.ReactNode
 }) {
+    // 🛡️ التحقق الصارم (بيفك تشفير الكوكي ويتأكد إنها مش منتهية ولا متزورة)
+    await requireAdmin()
+
     return (
         <div className="min-h-screen bg-[#0B0F17] relative">
             <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-3xl h-75 bg-red-500/10 blur-[120px] rounded-full pointer-events-none -z-10" />

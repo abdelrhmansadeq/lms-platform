@@ -3,7 +3,7 @@ import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { ArrowRight, PlayCircle, CheckCircle2, Paperclip, Download, FileText, Image as ImageIcon, File } from 'lucide-react'
-import { LessonContent } from './lesson-content' // <--- ضفنا المكون الجديد ده
+import { LessonContent } from './lesson-content'
 import { CommentsSection } from './comments-section'
 import DOMPurify from 'isomorphic-dompurify'
 
@@ -12,8 +12,9 @@ type AttachmentData = {
     lesson_id: string;
     title: string | null;
     file_name: string;
-    file_url: string;
+    file_path: string; // <--- غيرنا دي
     file_type: string;
+    signed_url?: string; // <--- ضفنا دي
 }
 
 type CommentWithProfile = {
@@ -61,7 +62,6 @@ export default async function LessonPlayerPage({
 
     if (!lesson) notFound()
 
-    // جلب الدرس التالي
     const { data: nextLesson } = await supabase
         .from('lessons')
         .select('id, title')
@@ -84,7 +84,19 @@ export default async function LessonPlayerPage({
         .eq('lesson_id', lesson.id)
         .order('created_at', { ascending: true })
 
-    const attachments = (attachmentsData as unknown as AttachmentData[]) || []
+    // 🌟 توليد روابط آمنة للمرفقات
+    const attachments = await Promise.all(
+        (attachmentsData || []).map(async (file) => {
+            const { data: urlData } = await supabase.storage
+                .from('lesson-files')
+                .createSignedUrl(file.file_path, 60 * 60) // اللينك صالح لمدة ساعة
+
+            return {
+                ...file,
+                signed_url: urlData?.signedUrl || '#'
+            }
+        })
+    ) as AttachmentData[]
 
     const { data: commentsData } = await supabase
         .from('lesson_comments')
@@ -97,13 +109,13 @@ export default async function LessonPlayerPage({
 
     const comments = (commentsData as unknown as CommentWithProfile[]) || []
 
-    // جلب ملاحظات الطالب
+    // ملاحظات الطالب
     const { data: notesData } = await supabase
         .from('lesson_notes')
         .select('*')
         .eq('user_id', user.id)
         .eq('lesson_id', lesson.id)
-        .order('timestamp_seconds', { ascending: true }) // بنرتبهم حسب وقت الفيديو
+        .order('timestamp_seconds', { ascending: true })
 
     const notes = notesData || []
 
@@ -131,7 +143,6 @@ export default async function LessonPlayerPage({
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <div className="lg:col-span-2 space-y-6 animate-fade-up delay-100">
 
-                    {/* استخدمنا المكون الجديد اللي فيه الفيديو والملاحظات */}
                     <LessonContent
                         youtubeId={lesson.youtube_id}
                         lessonId={lesson.id}
@@ -162,7 +173,6 @@ export default async function LessonPlayerPage({
                             dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(lesson.content || 'لا يوجد محتوى نصي مرفق مع هذا الدرس.') }}
                         />
 
-                        {/* المرفقات */}
                         {attachments.length > 0 && (
                             <div className="mt-8 pt-6 border-t border-white/5">
                                 <h3 className="text-lg font-bold mb-4 flex items-center gap-2 text-white">
@@ -173,7 +183,7 @@ export default async function LessonPlayerPage({
                                     {attachments.map((file) => (
                                         <a
                                             key={file.id}
-                                            href={file.file_url}
+                                            href={file.signed_url} // <--- بنستخدم اللينك الآمن هنا
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             download

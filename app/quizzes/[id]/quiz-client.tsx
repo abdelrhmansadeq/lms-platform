@@ -65,7 +65,7 @@ export function QuizClient({
             selectedOption: answers[qId]
         }))
 
-        const res = await submitQuizAction(attemptId, quizId, formattedAnswers)
+        const res = await submitQuizAction(attemptId, formattedAnswers)
 
         if (res.error) {
             toast.error(res.error)

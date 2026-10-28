@@ -3,7 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 
-// 1. اشتراك بكود تفعيل
+// 1. اشتراك بكود تفعيل (النسخة الآمنة)
 export async function enrollAction(_prevState: { error?: string; success?: string } | null, formData: FormData) {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
@@ -17,20 +17,24 @@ export async function enrollAction(_prevState: { error?: string; success?: strin
 
     const cleanCode = code.trim().toUpperCase()
 
+    // التعديل هنا: بنبعت بس الكورس والكود، والـ ID بياخده السيرفر من الجلسة
     const { data, error } = await supabase.rpc('enroll_with_code', {
-        p_student_id: user.id,
         p_course_id: courseId,
         p_code: cleanCode
     })
 
-    if (error) return { error: 'حدث خطأ في النظام، يرجى المحاولة لاحقاً' }
+    if (error) {
+        console.error("RPC Error:", error)
+        return { error: 'حدث خطأ في النظام، يرجى المحاولة لاحقاً' }
+    }
+
     if (data.error) return { error: data.error }
 
     revalidatePath(`/courses/[slug]`, 'page')
-    return { success: data.success }
+    return { success: 'تم الاشتراك في الكورس بنجاح' }
 }
 
-// 2. إضافة أو تعديل تقييم
+// 2. إضافة أو تعديل تقييم (سيبها زي ما هي)
 export async function submitReviewAction(_prevState: { error?: string; success?: string } | null, formData: FormData) {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
@@ -45,7 +49,6 @@ export async function submitReviewAction(_prevState: { error?: string; success?:
         return { error: 'يرجى اختيار تقييم من 1 إلى 5 نجوم' }
     }
 
-    // استخدام Upsert عشان لو قيّم قبل كده يتحدث تقييمه بدل ما يضرب إيرور
     const { error } = await supabase
         .from('reviews')
         .upsert({
@@ -63,30 +66,26 @@ export async function submitReviewAction(_prevState: { error?: string; success?:
     return { success: 'تم حفظ تقييمك بنجاح. شكراً لك!' }
 }
 
-
-
-
-// 4. الاشتراك في كورس مجاني (بدون كود)
+// 3. الاشتراك في كورس مجاني (سيبها زي ما هي)
 export async function enrollFreeCourseAction(courseId: string) {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
 
     if (!user) return { error: 'يجب تسجيل الدخول أولاً' }
 
-    // التأكد إن الكورس مجاني فعلاً
     const { data: course } = await supabase.from('courses').select('price').eq('id', courseId).single()
     if (!course || Number(course.price) > 0) {
         return { error: 'هذا الكورس غير مجاني، يرجى استخدام كود التفعيل.' }
     }
 
-    // إضافة الطالب في جدول الاشتراكات
-    const { error } = await supabase.from('enrollments').insert({
-        student_id: user.id,
-        course_id: courseId
-    })
+    const { error } = await supabase
+        .from('enrollments')
+        .insert({
+            student_id: user.id,
+            course_id: courseId
+        })
 
     if (error) {
-        // لو هو مشترك أصلاً
         if (error.code === '23505') {
             return { success: 'أنت مشترك بالفعل في هذا الكورس' }
         }

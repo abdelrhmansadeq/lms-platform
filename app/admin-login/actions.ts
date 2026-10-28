@@ -2,31 +2,33 @@
 
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
+import { ADMIN_COOKIE, safeEqual, signAdminToken } from '@/lib/admin/auth'
 
 export async function adminLoginAction(_prevState: { error?: string } | null, formData: FormData) {
-    const username = formData.get('username') as string
-    const password = formData.get('password') as string
+    const username = String(formData.get('username') ?? '')
+    const password = String(formData.get('password') ?? '')
 
-    // التحقق من المتغيرات السرية
-    if (username === process.env.ADMIN_USERNAME && password === process.env.ADMIN_PASSWORD) {
-        const cookieStore = await cookies()
+    const okUser = safeEqual(username, process.env.ADMIN_USERNAME!)
+    const okPass = safeEqual(password, process.env.ADMIN_PASSWORD!)
 
-        // بنكريت كوكي آمن جداً ومشفّر (httpOnly)
-        cookieStore.set('admin_session', 'authenticated', {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            maxAge: 60 * 60 * 24, // صالح لمدة يوم كامل
-            path: '/',
-        })
-
-        redirect('/admin') // التعديل هنا
-    } else {
-        return { error: 'اسم المستخدم أو كلمة المرور غير صحيحة' }
+    if (!(okUser && okPass)) {
+        return { error: 'بيانات الدخول غير صحيحة' }
     }
+
+    const cookieStore = await cookies()
+    cookieStore.set(ADMIN_COOKIE, signAdminToken(), {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 60 * 60, // ساعة واحدة
+        path: '/',
+    })
+
+    redirect('/admin')
 }
 
 export async function adminLogoutAction() {
     const cookieStore = await cookies()
-    cookieStore.delete('admin_session')
+    cookieStore.delete(ADMIN_COOKIE)
     redirect('/admin-login')
 }
