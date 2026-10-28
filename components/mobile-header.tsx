@@ -14,7 +14,6 @@ export async function MobileHeader() {
     let notifications = []
 
     if (user) {
-        // ضفنا avatar_url هنا
         const { data } = await supabase.from('profiles').select('full_name, role, avatar_url').eq('id', user.id).single()
         profile = data
 
@@ -44,7 +43,11 @@ export async function MobileHeader() {
                                 </Button>
                             </Link>
 
-                            <NotificationsBell initialNotifications={notifications} />
+                            {/* جرس الإشعارات (ضفنا currentUserId) */}
+                            <NotificationsBell
+                                initialNotifications={notifications}
+                                currentUserId={user.id}
+                            />
 
                             <Link href="/profile" className="flex items-center gap-2 ml-1">
                                 {profile?.avatar_url ? (

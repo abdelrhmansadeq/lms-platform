@@ -15,10 +15,11 @@ export async function Navbar() {
     let notifications = []
 
     if (user) {
-        // ضفنا avatar_url هنا
+        // جلب البروفايل
         const { data } = await supabase.from('profiles').select('full_name, role, avatar_url').eq('id', user.id).single()
         profile = data
 
+        // جلب أحدث 10 إشعارات
         const { data: notifs } = await supabase
             .from('notifications')
             .select('*')
@@ -55,7 +56,11 @@ export async function Navbar() {
                     <div className="flex items-center gap-4">
                         {user ? (
                             <>
-                                <NotificationsBell initialNotifications={notifications} />
+                                {/* جرس الإشعارات (ضفنا currentUserId) */}
+                                <NotificationsBell
+                                    initialNotifications={notifications}
+                                    currentUserId={user.id}
+                                />
 
                                 {/* عرض الصورة الشخصية */}
                                 <div className="flex items-center gap-3 border-r border-white/10 pr-4">
