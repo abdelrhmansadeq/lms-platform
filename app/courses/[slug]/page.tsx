@@ -1,8 +1,9 @@
+/* eslint-disable @next/next/no-img-element */
 import { Metadata } from 'next'
 import Image from 'next/image'
 import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardTitle } from '@/components/ui/card' // شلت المكتبات اللي مش مستخدمة
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import Link from 'next/link'
@@ -12,7 +13,6 @@ import { StarRating } from '@/components/star-rating'
 import { CheckCircle2, Lock, PlayCircle, UserCircle2, FileQuestion, ArrowLeft, BookOpen, Clock } from 'lucide-react'
 import { ChatWidget } from '@/components/chat-widget'
 
-// دالة الـ SEO الديناميكي
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
     const { slug } = await params
     const supabase = await createClient()
@@ -27,7 +27,6 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
         return { title: 'الكورس غير موجود | منصة LMS' }
     }
 
-    // بنشيل أي تاجات HTML من الوصف عشان يظهر كلام نضيف في جوجل
     const cleanDescription = course.description?.replace(/<[^>]*>?/gm, '').substring(0, 160) || 'اكتشف هذا الكورس الرائع على منصة LMS.'
 
     return {
@@ -120,18 +119,16 @@ export default async function CourseDetailsPage({ params }: { params: Promise<{ 
     return (
         <div className="container mx-auto px-4 md:px-6 lg:px-8 py-8 max-w-6xl relative">
 
-            {/* Glow في الخلفية */}
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-[800px] h-[400px] bg-emerald-500/10 blur-[120px] rounded-full pointer-events-none -z-10" />
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-200 h-100 bg-emerald-500/10 blur-[120px] rounded-full pointer-events-none -z-10" />
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
 
                 <div className="lg:col-span-2 space-y-8 animate-fade-up">
 
-                    {/* صورة الغلاف */}
                     {course.thumbnail_url && (
                         <div className="w-full h-64 md:h-[400px] rounded-3xl overflow-hidden border border-white/10 shadow-2xl relative bg-slate-800 group">
                             <Image src={course.thumbnail_url} alt={course.title} fill priority placeholder="blur" blurDataURL={blurDataURL} className="object-cover group-hover:scale-105 transition-transform duration-700" />
-                            <div className="absolute inset-0 bg-gradient-to-t from-[#0B0F17] via-[#0B0F17]/40 to-transparent" />
+                            <div className="absolute inset-0 bg-linear-to-t from-[#0B0F17] via-[#0B0F17]/40 to-transparent" />
                             <div className="absolute bottom-6 right-6 left-6">
                                 <h1 className="text-3xl md:text-5xl font-bold text-white mb-4 leading-tight tracking-tight">{course.title}</h1>
                                 <div className="flex flex-wrap items-center gap-4">
@@ -144,23 +141,20 @@ export default async function CourseDetailsPage({ params }: { params: Promise<{ 
                         </div>
                     )}
 
-                    {/* التفاصيل */}
                     <div>
                         <div className="flex items-center gap-3 mb-4">
                             <span className="text-2xl font-bold text-emerald-400">{avgRating}</span>
                             <StarRating initialRating={Number(avgRating)} readonly size="md" />
                             <span className="text-sm text-slate-400 font-medium">({reviewsCount} تقييم)</span>
                         </div>
-                        {/* عرض الوصف المنسق (HTML) */}
                         <div
                             className="prose dark:prose-invert max-w-none text-slate-400 text-lg leading-relaxed"
                             dangerouslySetInnerHTML={{ __html: course.description || '' }}
                         />
                     </div>
 
-                    {/* محتوى الكورس */}
-                    <div className="bg-white/[0.02] border border-white/5 rounded-3xl overflow-hidden shadow-sm animate-fade-up delay-100">
-                        <div className="p-6 border-b border-white/5 bg-white/[0.01]">
+                    <div className="bg-white/2 border border-white/5 rounded-3xl overflow-hidden shadow-sm animate-fade-up delay-100">
+                        <div className="p-6 border-b border-white/5 bg-white/1">
                             <div className="flex justify-between items-center mb-2">
                                 <h3 className="text-2xl font-bold flex items-center gap-2 text-white"><BookOpen className="w-6 h-6 text-emerald-400"/> محتوى الكورس</h3>
                                 <span className="text-sm font-medium bg-emerald-500/10 text-emerald-400 px-3 py-1 rounded-full border border-emerald-500/20">{lessons?.length || 0} درس</span>
@@ -184,10 +178,10 @@ export default async function CourseDetailsPage({ params }: { params: Promise<{ 
                                 </div>
                             ) : (
                                 <div className="space-y-1">
-                                    {lessons?.map((lesson, index) => {
+                                    {lessons?.map((lesson) => { // شلنا index لأننا مش بنستخدمه
                                         const isCompleted = completedLessonIds.includes(lesson.id)
                                         return (
-                                            <div key={lesson.id} className="group flex items-center justify-between p-4 rounded-xl hover:bg-white/[0.04] transition-all duration-200 border border-transparent hover:border-white/10">
+                                            <div key={lesson.id} className="group flex items-center justify-between p-4 rounded-xl hover:bg-white/4 transition-all duration-200 border border-transparent hover:border-white/10">
                                                 <div className="flex items-center gap-4">
                                                     <div className="w-10 h-10 rounded-full bg-[#0B0F17] border border-white/10 flex items-center justify-center shrink-0 group-hover:border-emerald-500/50 transition-colors">
                                                         {isCompleted ? <CheckCircle2 className="w-5 h-5 text-emerald-500" /> : <span className="text-sm font-bold text-slate-400 group-hover:text-emerald-400">{lesson.position}</span>}
@@ -212,13 +206,12 @@ export default async function CourseDetailsPage({ params }: { params: Promise<{ 
                             )}
                         </div>
 
-                        {/* الاختبارات */}
                         {isEnrolled && quizzes.length > 0 && (
-                            <div className="p-6 border-t border-white/5 bg-white/[0.01]">
+                            <div className="p-6 border-t border-white/5 bg-white/1">
                                 <h4 className="font-bold text-xl mb-4 flex items-center gap-2 text-white"><FileQuestion className="w-5 h-5 text-emerald-400"/> اختبارات الكورس</h4>
                                 <div className="grid sm:grid-cols-2 gap-4">
                                     {quizzes.map((quiz) => (
-                                        <div key={quiz.id} className="flex flex-col justify-between p-5 border border-white/5 rounded-2xl bg-white/[0.02] hover:border-emerald-500/30 transition-colors shadow-sm">
+                                        <div key={quiz.id} className="flex flex-col justify-between p-5 border border-white/5 rounded-2xl bg-white/2 hover:border-emerald-500/30 transition-colors shadow-sm">
                                             <span className="font-bold text-lg mb-4 text-slate-200">{quiz.title}</span>
                                             <Link href={`/quizzes/${quiz.id}`}>
                                                 <Button size="sm" className="w-full gap-2 bg-white/5 hover:bg-emerald-500 text-white hover:text-black transition-colors border border-white/10 hover:border-emerald-500">
@@ -232,7 +225,6 @@ export default async function CourseDetailsPage({ params }: { params: Promise<{ 
                         )}
                     </div>
 
-                    {/* التقييمات */}
                     <div className="pt-8 animate-fade-up delay-200" id="reviews">
                         <h3 className="text-2xl font-bold mb-6 flex items-center gap-2 text-white"><StarRating initialRating={0} readonly size="sm"/> تقييمات الطلاب</h3>
 
@@ -240,8 +232,8 @@ export default async function CourseDetailsPage({ params }: { params: Promise<{ 
 
                         <div className="grid gap-4 sm:grid-cols-2">
                             {typedReviews.length > 0 ? (
-                                typedReviews.map((review) => (
-                                    <div key={review.id} className="p-5 bg-white/[0.02] border border-white/5 rounded-2xl shadow-sm">
+                                typedReviews.map((review) => ( // شلنا index
+                                    <div key={review.id} className="p-5 bg-white/2 border border-white/5 rounded-2xl shadow-sm">
                                         <div className="flex justify-between items-start mb-3">
                                             <div className="flex items-center gap-3">
                                                 {review.profiles?.avatar_url ? (
@@ -262,7 +254,7 @@ export default async function CourseDetailsPage({ params }: { params: Promise<{ 
                                     </div>
                                 ))
                             ) : (
-                                <div className="col-span-full text-center py-10 bg-white/[0.02] rounded-2xl border border-white/5 border-dashed">
+                                <div className="col-span-full text-center py-10 bg-white/2 rounded-2xl border border-white/5 border-dashed">
                                     <p className="text-slate-500">لا توجد تقييمات بعد. كن أول من يقيّم!</p>
                                 </div>
                             )}
@@ -270,11 +262,11 @@ export default async function CourseDetailsPage({ params }: { params: Promise<{ 
                     </div>
                 </div>
 
-                {/* صندوق الاشتراك (Glassmorphism) */}
                 <div className="animate-fade-up delay-200">
                     <div className="sticky top-24">
                         <Card className="relative bg-white/5 backdrop-blur-xl border border-white/10 shadow-2xl rounded-3xl overflow-hidden">
-                            <div className="bg-gradient-to-b from-emerald-500/10 to-transparent p-8 text-center border-b border-white/5">
+                            {/* هنا التعديل: bg-linear-to-b */}
+                            <div className="bg-linear-to-b from-emerald-500/10 to-transparent p-8 text-center border-b border-white/5">
                                 <p className="text-sm font-medium text-slate-400 mb-2">سعر الكورس</p>
                                 <CardTitle className="text-5xl font-extrabold text-white tracking-tight">
                                     {course.price === 0 ? 'مجاني' : `${course.price}`}
@@ -312,7 +304,6 @@ export default async function CourseDetailsPage({ params }: { params: Promise<{ 
                 </div>
             </div>
 
-            {/* زرار الشات مع المدرس */}
             {user && user.id !== course.instructor_id && (
                 <ChatWidget
                     currentUserId={user.id}
@@ -320,7 +311,6 @@ export default async function CourseDetailsPage({ params }: { params: Promise<{ 
                     otherUserName={course.profiles?.full_name || 'المدرس'}
                 />
             )}
-
         </div>
     )
 }

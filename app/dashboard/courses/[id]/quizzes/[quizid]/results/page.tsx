@@ -5,6 +5,15 @@ import { Button } from '@/components/ui/button'
 import { ArrowRight, UserCircle2 } from 'lucide-react'
 import { ExportCsvButton } from './export-button'
 
+// التعديل هنا: تعريف نوع للبيانات عشان نمنع any
+type QuizAttemptData = {
+    id: string;
+    score: number;
+    total_questions: number;
+    created_at: string;
+    profiles: { full_name: string | null } | null;
+}
+
 export default async function QuizResultsPage({ params }: { params: Promise<{ id: string, quizid: string }> }) {
     const { id, quizid } = await params
     const supabase = await createClient()
@@ -18,7 +27,7 @@ export default async function QuizResultsPage({ params }: { params: Promise<{ id
     const { data: quiz } = await supabase.from('quizzes').select('title').eq('id', quizid).single()
     if (!quiz) notFound()
 
-    const { data: attempts } = await supabase
+    const { data: attemptsData } = await supabase
         .from('quiz_attempts')
         .select(`
       id, score, total_questions, created_at,
@@ -27,8 +36,11 @@ export default async function QuizResultsPage({ params }: { params: Promise<{ id
         .eq('quiz_id', quizid)
         .order('created_at', { ascending: false })
 
+    // التعديل هنا: استخدمنا النوع اللي عرفناه فوق
+    const attempts = (attemptsData as unknown as QuizAttemptData[]) || []
+
     // تجهيز البيانات للتصدير
-    const exportData = (attempts || []).map((attempt: any) => ({
+    const exportData = attempts.map((attempt) => ({
         name: attempt.profiles?.full_name || 'طالب مجهول',
         score: attempt.score,
         total: attempt.total_questions,
@@ -39,7 +51,8 @@ export default async function QuizResultsPage({ params }: { params: Promise<{ id
     return (
         <div className="space-y-6 max-w-4xl mx-auto relative animate-fade-up">
 
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-[600px] h-[300px] bg-emerald-500/10 blur-[120px] rounded-full pointer-events-none -z-10" />
+            {/* التعديل هنا: max-w-150 و h-75 */}
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-150 h-75 bg-emerald-500/10 blur-[120px] rounded-full pointer-events-none -z-10" />
 
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
                 <div className="flex items-center gap-4">
@@ -56,7 +69,8 @@ export default async function QuizResultsPage({ params }: { params: Promise<{ id
                 <ExportCsvButton data={exportData} quizTitle={quiz.title} />
             </div>
 
-            <div className="bg-white/[0.02] border border-white/5 rounded-3xl shadow-xl overflow-hidden backdrop-blur-sm">
+            {/* التعديل هنا: bg-white/2 */}
+            <div className="bg-white/2 border border-white/5 rounded-3xl shadow-xl overflow-hidden backdrop-blur-sm">
                 {(!attempts || attempts.length === 0) ? (
                     <div className="p-16 text-center text-slate-400">
                         <UserCircle2 className="w-12 h-12 mx-auto mb-4 opacity-50" />
@@ -74,7 +88,8 @@ export default async function QuizResultsPage({ params }: { params: Promise<{ id
                             </tr>
                             </thead>
                             <tbody className="divide-y divide-white/5">
-                            {attempts.map((attempt: any) => {
+                            {/* التعديل هنا: شلنا any من map */}
+                            {attempts.map((attempt) => {
                                 const percentage = Math.round((attempt.score / attempt.total_questions) * 100)
                                 return (
                                     <tr key={attempt.id} className="hover:bg-white/5 transition-colors">

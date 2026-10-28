@@ -3,9 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://lms-platform-xxxx.vercel.app'
-    const supabase = await createClient()
 
-    // 1. الروابط الثابتة (الرئيسية والمنتدى)
     const staticRoutes = [
         {
             url: baseUrl,
@@ -21,30 +19,37 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         },
     ]
 
-    // 2. روابط الكورسات
-    const { data: courses } = await supabase
-        .from('courses')
-        .select('slug, created_at')
-        .eq('is_published', true)
+    try {
+        const supabase = await createClient()
 
-    const courseRoutes = (courses || []).map((course) => ({
-        url: `${baseUrl}/courses/${course.slug}`,
-        lastModified: new Date(course.created_at),
-        changeFrequency: 'weekly' as const,
-        priority: 0.9,
-    }))
+        // 1. روابط الكورسات
+        const { data: courses } = await supabase
+            .from('courses')
+            .select('slug, created_at')
+            .eq('is_published', true)
 
-    // 3. روابط مواضيع المنتدى
-    const { data: posts } = await supabase
-        .from('forum_posts')
-        .select('id, created_at')
+        const courseRoutes = (courses || []).map((course) => ({
+            url: `${baseUrl}/courses/${course.slug}`,
+            lastModified: new Date(course.created_at),
+            changeFrequency: 'weekly' as const,
+            priority: 0.9,
+        }))
 
-    const postRoutes = (posts || []).map((post) => ({
-        url: `${baseUrl}/forum/${post.id}`,
-        lastModified: new Date(post.created_at),
-        changeFrequency: 'weekly' as const,
-        priority: 0.6,
-    }))
+        // 2. روابط مواضيع المنتدى
+        const { data: posts } = await supabase
+            .from('forum_posts')
+            .select('id, created_at')
 
-    return [...staticRoutes, ...courseRoutes, ...postRoutes]
+        const postRoutes = (posts || []).map((post) => ({
+            url: `${baseUrl}/forum/${post.id}`,
+            lastModified: new Date(post.created_at),
+            changeFrequency: 'weekly' as const,
+            priority: 0.6,
+        }))
+
+        return [...staticRoutes, ...courseRoutes, ...postRoutes]
+    } catch (error) {
+        console.error('Error generating sitemap:', error)
+        return staticRoutes // لو الداتابيز ضربت، نرجع الصفحات الأساسية عشان الـ Build ميفشلش
+    }
 }

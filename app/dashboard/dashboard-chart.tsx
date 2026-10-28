@@ -9,7 +9,7 @@ type ChartData = {
 
 export function DashboardChart({ data }: { data: ChartData[] }) {
     return (
-        <div className="h-[300px] w-full mt-4">
+        <div className="h-75 w-full mt-4">
             <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={data} margin={{ top: 10, right: 0, left: 0, bottom: 0 }}>
                     <defs>
@@ -48,7 +48,8 @@ export function DashboardChart({ data }: { data: ChartData[] }) {
                             direction: 'rtl'
                         }}
                         itemStyle={{ color: '#10b981', fontWeight: 'bold' }}
-                        formatter={(value: any) => [`${value} ج.م`, 'الأرباح']}
+                        // شيلنا : number وخليها تستنتج النوع لوحدها
+                        formatter={(value) => [`${value} ج.م`, 'الأرباح']}
                     />
 
                     <Area

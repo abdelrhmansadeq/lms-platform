@@ -5,6 +5,16 @@ import { Button } from '@/components/ui/button'
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { MessageSquare, Plus, UserCircle2, ChevronRight, ChevronLeft } from 'lucide-react'
 
+// 1. تعريف النوع عشان نمنع any
+type ForumPost = {
+    id: string;
+    title: string;
+    content: string;
+    created_at: string;
+    profiles: { full_name: string | null; avatar_url: string | null; } | null;
+    forum_replies: { id: string }[] | null;
+}
+
 export default async function ForumPage({
                                             searchParams
                                         }: {
@@ -17,7 +27,7 @@ export default async function ForumPage({
     const itemsPerPage = 6
     const offset = (currentPage - 1) * itemsPerPage
 
-    const { data: posts, count } = await supabase
+    const { data: postsData, count } = await supabase
         .from('forum_posts')
         .select(`
       id, title, content, created_at,
@@ -27,12 +37,15 @@ export default async function ForumPage({
         .order('created_at', { ascending: false })
         .range(offset, offset + itemsPerPage - 1)
 
+    // 2. تحويل البيانات للنوع اللي عرفناه فوق
+    const posts = (postsData as unknown as ForumPost[]) || []
     const totalPages = count ? Math.ceil(count / itemsPerPage) : 0
 
     return (
         <div className="container mx-auto px-4 md:px-6 lg:px-8 py-12 max-w-5xl relative">
 
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-[600px] h-[300px] bg-emerald-500/10 blur-[120px] rounded-full pointer-events-none -z-10" />
+            {/* التعديل هنا: max-w-200 و h-75 */}
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-150 h-75 bg-emerald-500/10 blur-[120px] rounded-full pointer-events-none -z-10" />
 
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-10 animate-fade-up">
                 <div>
@@ -51,7 +64,7 @@ export default async function ForumPage({
             </div>
 
             {(!posts || posts.length === 0) ? (
-                <div className="text-center py-24 bg-white/[0.02] rounded-3xl border border-white/5 shadow-sm animate-fade-in backdrop-blur-sm">
+                <div className="text-center py-24 bg-white/2 rounded-3xl border border-white/5 shadow-sm animate-fade-in backdrop-blur-sm">
                     <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-6">
                         <MessageSquare className="w-10 h-10 text-slate-500" />
                     </div>
@@ -67,7 +80,8 @@ export default async function ForumPage({
                         {posts.map((post, index) => (
                             <Link href={`/forum/${post.id}`} key={post.id}>
                                 <Card
-                                    className="bg-white/[0.02] border-white/5 hover:border-emerald-500/50 hover:bg-white/[0.04] transition-all duration-300 hover:shadow-[0_10px_40px_-10px_rgba(16,185,129,0.2)] hover:-translate-y-1 animate-fade-up group rounded-3xl"
+                                    // التعديل هنا: bg-white/2 و hover:bg-white/4
+                                    className="bg-white/2 border-white/5 hover:border-emerald-500/50 hover:bg-white/4 transition-all duration-300 hover:shadow-[0_10px_40px_-10px_rgba(16,185,129,0.2)] hover:-translate-y-1 animate-fade-up group rounded-3xl"
                                     style={{ animationDelay: `${index * 50}ms` }}
                                 >
                                     <CardHeader className="p-6">
@@ -84,21 +98,21 @@ export default async function ForumPage({
 
                                         <div className="flex items-center justify-between mt-6 pt-4 border-t border-white/5">
                                             <div className="flex items-center gap-2 text-sm text-slate-400">
-                                                {/* عرض الصورة الشخصية */}
-                                                {(post.profiles as any)?.avatar_url ? (
-                                                    <img src={(post.profiles as any).avatar_url} alt="Avatar" className="w-6 h-6 rounded-full object-cover border border-white/10" />
+                                                {/* شلنا as any */}
+                                                {post.profiles?.avatar_url ? (
+                                                    <img src={post.profiles.avatar_url} alt="Avatar" className="w-6 h-6 rounded-full object-cover border border-white/10" />
                                                 ) : (
                                                     <UserCircle2 className="w-5 h-5" />
                                                 )}
                                                 <span className="font-medium text-slate-300">
-                          {(post.profiles as any)?.full_name || 'طالب'}
+                          {post.profiles?.full_name || 'طالب'}
                         </span>
                                                 <span className="text-xs hidden sm:inline-block">• {new Date(post.created_at).toLocaleDateString('ar-EG')}</span>
                                             </div>
 
                                             <div className="flex items-center gap-1.5 text-sm font-medium text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-full">
                                                 <MessageSquare className="w-4 h-4" />
-                                                <span>{(post.forum_replies as any)?.length || 0} رد</span>
+                                                <span>{post.forum_replies?.length || 0} رد</span>
                                             </div>
                                         </div>
                                     </CardHeader>
@@ -107,6 +121,7 @@ export default async function ForumPage({
                         ))}
                     </div>
 
+                    {/* أزرار الترقيم (Pagination) */}
                     {totalPages > 1 && (
                         <div className="flex justify-center items-center gap-2 mt-12 animate-fade-up">
                             <Link href={`/forum?page=${currentPage - 1}`} className={currentPage === 1 ? 'pointer-events-none opacity-50' : ''}>
