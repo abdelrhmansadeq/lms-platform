@@ -1,17 +1,17 @@
 /* eslint-disable @next/next/no-img-element */
-import { Metadata } from 'next'
+import {Metadata} from 'next'
 import Image from 'next/image'
-import { createClient } from '@/lib/supabase/server'
-import { notFound } from 'next/navigation'
-import { Card, CardContent, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Progress } from '@/components/ui/progress'
+import {createClient} from '@/lib/supabase/server'
+import {notFound} from 'next/navigation'
+import {Card, CardContent, CardTitle} from '@/components/ui/card'
+import {Button} from '@/components/ui/button'
+import {Progress} from '@/components/ui/progress'
 import Link from 'next/link'
-import { EnrollForm } from './enroll-form'
-import { ReviewForm } from './review-form'
-import { StarRating } from '@/components/star-rating'
-import { CheckCircle2, Lock, PlayCircle, UserCircle2, FileQuestion, ArrowLeft, BookOpen, Clock } from 'lucide-react'
-import { ChatWidget } from '@/components/chat-widget'
+import {EnrollForm} from './enroll-form'
+import {ReviewForm} from './review-form'
+import {StarRating} from '@/components/star-rating'
+import {ArrowLeft, BookOpen, CheckCircle2, Clock, FileQuestion, Lock, PlayCircle, UserCircle2} from 'lucide-react'
+import {ChatWidget} from '@/components/chat-widget'
 import DOMPurify from 'isomorphic-dompurify' // <--- ضفنا المكتبة دي
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
