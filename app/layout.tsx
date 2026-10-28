@@ -1,10 +1,10 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { Inter, IBM_Plex_Sans_Arabic } from 'next/font/google'
 import './globals.css'
 import { Navbar } from '@/components/navbar'
 import { MobileHeader } from '@/components/mobile-header'
 import { WhatsAppButton } from '@/components/whatsapp-button'
-import { Footer } from '@/components/footer' // <--- ضفنا ده
+import { Footer } from '@/components/footer'
 import { Toaster } from 'sonner'
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter', display: 'swap' })
@@ -18,6 +18,20 @@ const ibmPlexArabic = IBM_Plex_Sans_Arabic({
 export const metadata: Metadata = {
     title: 'منصة LMS التعليمية',
     description: 'منصة لرفع ومشاهدة الكورسات والدروس',
+    manifest: '/manifest.webmanifest',
+    appleWebApp: {
+        capable: true,
+        statusBarStyle: 'default',
+        title: 'منصة LMS',
+    },
+}
+
+// ضفنا الـ Viewport عشان لون شريط الحالة في الموبايل
+export const viewport: Viewport = {
+    themeColor: '#10B981',
+    width: 'device-width',
+    initialScale: 1,
+    maximumScale: 1,
 }
 
 export default function RootLayout({
@@ -36,11 +50,8 @@ export default function RootLayout({
             {children}
         </main>
 
-        {/* الفوتر الجديد */}
         <Footer />
-
         <WhatsAppButton />
-
         <Toaster position="top-center" richColors />
         </body>
         </html>
