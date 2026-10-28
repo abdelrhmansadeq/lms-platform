@@ -3,19 +3,20 @@ import Image from 'next/image'
 import { createClient } from '@/lib/supabase/server'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Search, Sparkles, ChevronRight, ChevronLeft, PlayCircle, Users, Award, ShieldCheck, GraduationCap } from 'lucide-react'
+import { Search, Sparkles, ChevronRight, ChevronLeft, PlayCircle, Users, Award, ShieldCheck, CircleDollarSign } from 'lucide-react'
 import { WishlistButton } from '@/components/wishlist-button'
 
 export default async function Home({
                                        searchParams
                                    }: {
-    searchParams: Promise<{ q?: string, page?: string, category?: string }>
+    searchParams: Promise<{ q?: string, page?: string, category?: string, price?: string }>
 }) {
     const supabase = await createClient()
-    const { q, page, category } = await searchParams
+    const { q, page, category, price } = await searchParams
 
     const searchQuery = q?.trim() || ''
     const categorySlug = category || ''
+    const priceFilter = price || 'all' // all, free, paid
     const currentPage = Number(page) || 1
     const itemsPerPage = 6
     const offset = (currentPage - 1) * itemsPerPage
@@ -58,6 +59,13 @@ export default async function Home({
         query = query.eq('category_id', categoryId)
     }
 
+    // فلترة السعر
+    if (priceFilter === 'free') {
+        query = query.eq('price', 0)
+    } else if (priceFilter === 'paid') {
+        query = query.gt('price', 0)
+    }
+
     const { data: courses, count } = await query
         .order('created_at', { ascending: false })
         .range(offset, offset + itemsPerPage - 1)
@@ -70,10 +78,30 @@ export default async function Home({
 
     const blurDataURL = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=";
 
+    // دالة مساعدة لبناء الروابط مع الحفاظ على الفلاتر
+    const buildUrl = (newCategory?: string, newPrice?: string, newPage?: number) => {
+        const params = new URLSearchParams()
+        if (searchQuery) params.set('q', searchQuery)
+        if (newCategory !== undefined) {
+            if (newCategory) params.set('category', newCategory)
+        } else if (categorySlug) {
+            params.set('category', categorySlug)
+        }
+        if (newPrice !== undefined) {
+            if (newPrice !== 'all') params.set('price', newPrice)
+        } else if (priceFilter !== 'all') {
+            params.set('price', priceFilter)
+        }
+        if (newPage !== undefined) {
+            if (newPage > 1) params.set('page', String(newPage))
+        }
+        const str = params.toString()
+        return str ? `/?${str}#courses` : '/#courses'
+    }
+
     return (
         <div className="min-h-screen relative overflow-hidden bg-[#0B0F17]">
 
-            {/* Glow الخلفي */}
             <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[500px] bg-emerald-500/20 blur-[120px] rounded-full pointer-events-none -z-10" />
 
             {/* 1. قسم الهيرو (Hero Section) */}
@@ -189,24 +217,46 @@ export default async function Home({
                                 />
                             </div>
                             {categorySlug && <input type="hidden" name="category" value={categorySlug} />}
+                            {priceFilter !== 'all' && <input type="hidden" name="price" value={priceFilter} />}
                             <Button type="submit" size="lg" className="h-12 rounded-xl px-8 bg-emerald-500 hover:bg-emerald-400 text-black font-bold transition-all shadow-[0_0_20px_-5px_rgba(16,185,129,0.6)]">
                                 بحث
                             </Button>
                         </form>
                     </div>
 
+                    {/* أزرار الفلترة (السعر) */}
+                    <div className="flex flex-col items-center gap-4 mb-8">
+                        <div className="flex items-center gap-2 bg-white/5 p-1 rounded-2xl border border-white/10">
+                            <Link href={buildUrl(undefined, 'all')}>
+                                <Button variant={priceFilter === 'all' ? 'default' : 'ghost'} className={`rounded-xl ${priceFilter === 'all' ? 'bg-white text-black font-bold' : 'text-slate-400 hover:text-white'}`}>
+                                    الكل
+                                </Button>
+                            </Link>
+                            <Link href={buildUrl(undefined, 'free')}>
+                                <Button variant={priceFilter === 'free' ? 'default' : 'ghost'} className={`rounded-xl ${priceFilter === 'free' ? 'bg-emerald-500 text-black font-bold' : 'text-slate-400 hover:text-white'}`}>
+                                    مجاني
+                                </Button>
+                            </Link>
+                            <Link href={buildUrl(undefined, 'paid')}>
+                                <Button variant={priceFilter === 'paid' ? 'default' : 'ghost'} className={`rounded-xl ${priceFilter === 'paid' ? 'bg-blue-500 text-white font-bold' : 'text-slate-400 hover:text-white'}`}>
+                                    مدفوع
+                                </Button>
+                            </Link>
+                        </div>
+                    </div>
+
                     {/* أزرار التصنيفات */}
                     <div className="flex overflow-x-auto gap-3 pb-6 mb-6 scrollbar-hide justify-center">
-                        <Link href={`/?${searchQuery ? `q=${searchQuery}` : ''}#courses`}>
+                        <Link href={buildUrl('', undefined)}>
                             <Button
                                 variant="outline"
                                 className={`rounded-full px-6 transition-all ${!categorySlug ? 'bg-emerald-500 text-black border-emerald-500 font-bold' : 'bg-white/5 border-white/10 text-slate-300 hover:bg-white/10 hover:text-white'}`}
                             >
-                                الكل
+                                كل التصنيفات
                             </Button>
                         </Link>
                         {categories?.map((cat) => (
-                            <Link key={cat.id} href={`/?category=${cat.slug}${searchQuery ? `&q=${searchQuery}` : ''}#courses`}>
+                            <Link key={cat.id} href={buildUrl(cat.slug, undefined)}>
                                 <Button
                                     variant="outline"
                                     className={`rounded-full px-6 whitespace-nowrap transition-all ${categorySlug === cat.slug ? 'bg-emerald-500 text-black border-emerald-500 font-bold' : 'bg-white/5 border-white/10 text-slate-300 hover:bg-white/10 hover:text-white'}`}
@@ -230,13 +280,11 @@ export default async function Home({
                             <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-6">
                                 <Search className="w-10 h-10 text-slate-400" />
                             </div>
-                            <h3 className="text-2xl font-semibold mb-2 text-white">لا توجد كورسات في هذا التصنيف</h3>
-                            <p className="text-slate-400 mb-8">جرب تصنيف آخر أو تصفح جميع الكورسات.</p>
-                            {(searchQuery || categorySlug) && (
-                                <Link href="/#courses">
-                                    <Button variant="outline" size="lg" className="border-white/10 hover:bg-white/5 text-white">عرض كل الكورسات</Button>
-                                </Link>
-                            )}
+                            <h3 className="text-2xl font-semibold mb-2 text-white">لا توجد كورسات تطابق بحثك</h3>
+                            <p className="text-slate-400 mb-8">جرب تغيير الفلاتر أو البحث بكلمات أخرى.</p>
+                            <Link href="/#courses">
+                                <Button variant="outline" size="lg" className="border-white/10 hover:bg-white/5 text-white">عرض كل الكورسات</Button>
+                            </Link>
                         </div>
                     ) : (
                         <>
@@ -254,7 +302,16 @@ export default async function Home({
                                                 initialIsWishlisted={wishlistedCourseIds.includes(course.id)}
                                                 isLoggedIn={!!user}
                                             />
-                                            <div className="absolute top-3 right-3 bg-emerald-500/20 backdrop-blur-md text-emerald-400 text-xs font-bold px-3 py-1 rounded-full border border-emerald-500/30 z-10">جديد</div>
+
+                                            {/* بادج السعر */}
+                                            <div className={`absolute top-3 right-3 backdrop-blur-md text-xs font-bold px-3 py-1 rounded-full border z-10 ${
+                                                course.price === 0
+                                                    ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+                                                    : 'bg-blue-500/20 text-blue-400 border-blue-500/30'
+                                            }`}>
+                                                {course.price === 0 ? 'مجاني' : `${course.price} ج.م`}
+                                            </div>
+
                                             {course.thumbnail_url ? (
                                                 <Image src={course.thumbnail_url} alt={course.title} fill sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" placeholder="blur" blurDataURL={blurDataURL} className="object-cover group-hover:scale-110 transition-transform duration-700 ease-out opacity-80 group-hover:opacity-100" />
                                             ) : (
@@ -278,13 +335,13 @@ export default async function Home({
 
                             {totalPages > 1 && (
                                 <div className="flex justify-center items-center gap-2 mt-12 animate-fade-up">
-                                    <Link href={`/?page=${currentPage - 1}${searchQuery ? `&q=${searchQuery}` : ''}${categorySlug ? `&category=${categorySlug}` : ''}#courses`} className={currentPage === 1 ? 'pointer-events-none opacity-50' : ''}>
+                                    <Link href={buildUrl(undefined, undefined, currentPage - 1)} className={currentPage === 1 ? 'pointer-events-none opacity-50' : ''}>
                                         <Button variant="outline" size="icon" className="bg-white/5 border-white/10 hover:bg-white/10"><ChevronRight className="w-4 h-4" /></Button>
                                     </Link>
 
                                     <div className="flex gap-1">
                                         {Array.from({ length: totalPages }).map((_, i) => (
-                                            <Link key={i} href={`/?page=${i + 1}${searchQuery ? `&q=${searchQuery}` : ''}${categorySlug ? `&category=${categorySlug}` : ''}#courses`}>
+                                            <Link key={i} href={buildUrl(undefined, undefined, i + 1)}>
                                                 <Button
                                                     variant={currentPage === i + 1 ? "default" : "outline"}
                                                     size="sm"
@@ -296,7 +353,7 @@ export default async function Home({
                                         ))}
                                     </div>
 
-                                    <Link href={`/?page=${currentPage + 1}${searchQuery ? `&q=${searchQuery}` : ''}${categorySlug ? `&category=${categorySlug}` : ''}#courses`} className={currentPage === totalPages ? 'pointer-events-none opacity-50' : ''}>
+                                    <Link href={buildUrl(undefined, undefined, currentPage + 1)} className={currentPage === totalPages ? 'pointer-events-none opacity-50' : ''}>
                                         <Button variant="outline" size="icon" className="bg-white/5 border-white/10 hover:bg-white/10"><ChevronLeft className="w-4 h-4" /></Button>
                                     </Link>
                                 </div>
